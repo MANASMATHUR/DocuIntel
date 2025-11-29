@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "cd nextjs-app && npm run dev",
-    "build": "cd nextjs-app && npm run build",
+    "build": "cd nextjs-app && npm install && npm run build",
     "start": "cd nextjs-app && npm start",
+    "install": "cd nextjs-app && npm install",
     "install:nextjs": "cd nextjs-app && npm install",
     "install:python": "pip install -r requirements.txt"
   },
