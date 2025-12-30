@@ -6,7 +6,7 @@
 
 - **Frontend + Backend (Next.js):** Full-stack Next.js app with API routes and React components
 - **Agent Core (Python):** Planner/Worker/Reviewer loop with smart model router + execution policies
-- ** Tool Layer (Python):** document ingestion, clause segmentation, clause RAG, risk scoring, redline generation, doc comparator, reporting
+- **Tool Layer (Python):** document ingestion, clause segmentation, clause RAG, risk scoring, redline generation, doc comparator, reporting
 - **Storage:** MongoDB for cases/audit logs + ChromaDB for clause embeddings
 - **Serverless (Modal):** Optional GPU-accelerated planning/review tasks via Modal functions
 
