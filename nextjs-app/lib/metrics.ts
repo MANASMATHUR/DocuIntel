@@ -264,40 +264,6 @@ class MetricsManager {
     }
 
     /**
-     * Simulates benchmark metrics for demo
-     */
-    simulateBenchmarkMetrics(): void {
-        // Simulate retrieval accuracy around 92%
-        for (let i = 0; i < 100; i++) {
-            const accuracy = 0.88 + Math.random() * 0.08; // 88-96%
-            this.recordRetrievalAccuracy(accuracy);
-        }
-
-        // Simulate latency around 1800ms
-        for (let i = 0; i < 50; i++) {
-            const latency = 1500 + Math.random() * 600; // 1500-2100ms
-            this.recordLatency(latency);
-        }
-
-        // Simulate low hallucination rate (< 5%)
-        for (let i = 0; i < 100; i++) {
-            const hallucinated = Math.random() < 0.04; // 4% chance
-            this.recordHallucination(hallucinated);
-        }
-
-        // Simulate token usage
-        for (let i = 0; i < 30; i++) {
-            const tokens = 500 + Math.random() * 1500;
-            this.recordTokens(tokens);
-        }
-
-        // Simulate high success rate
-        for (let i = 0; i < 100; i++) {
-            this.recordRequest(Math.random() > 0.02); // 98% success
-        }
-    }
-
-    /**
      * Resets all metrics
      */
     reset(): void {
@@ -310,8 +276,10 @@ class MetricsManager {
 // Export singleton instance
 export const metrics = new MetricsManager();
 
-// Initialize with demo metrics
-metrics.simulateBenchmarkMetrics();
+// Initialize metrics manager
+// Note: Data will accumulate as the user interacts with the application.
+// metrics.simulateBenchmarkMetrics(); // DISABLED: Real metrics only.
+
 
 /**
  * Express-style middleware for request timing
