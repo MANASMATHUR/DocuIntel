@@ -38,6 +38,15 @@ next-env.d.ts
 # tmp files
 /tmp
 
+# local report share store (generated at runtime)
+.data/
+
+# lint output
+lint_output.txt
+
+# ChromaDB / semantic cache
+autolawyer-mcp/cache/
+
 python_modules/
 python_modules/*
 *.pyc

@@ -1,226 +1,233 @@
 <p align="center">
-  <h1 align="center">🏛️ DocuIntel: Legal AI Assistant</h1>
+  <h1 align="center">DocuIntel: Legal AI Assistant</h1>
   <p align="center">
-    <strong>Production-grade RAG system for intelligent contract analysis</strong>
+    <strong>AI-powered contract analysis, risk assessment, and redline generation</strong>
   </p>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14.0-black?style=for-the-badge&logo=next.js" alt="Next.js"/>
+  <img src="https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js" alt="Next.js"/>
   <img src="https://img.shields.io/badge/TypeScript-5.3-blue?style=for-the-badge&logo=typescript" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?style=for-the-badge&logo=openai" alt="OpenAI"/>
+  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb" alt="MongoDB"/>
   <img src="https://img.shields.io/badge/Python-3.11-yellow?style=for-the-badge&logo=python" alt="Python"/>
-  <img src="https://img.shields.io/badge/LangChain-0.1-green?style=for-the-badge" alt="LangChain"/>
-  <img src="https://img.shields.io/badge/OpenAI-GPT--4-412991?style=for-the-badge&logo=openai" alt="OpenAI"/>
-  <img src="https://img.shields.io/badge/ChromaDB-Vector_Store-orange?style=for-the-badge" alt="ChromaDB"/>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Retrieval_Accuracy-96%25-brightgreen?style=flat-square" alt="Accuracy"/>
-  <img src="https://img.shields.io/badge/Response_Time-<500ms-blue?style=flat-square" alt="Response Time"/>
-  <img src="https://img.shields.io/badge/Hallucination_Rate-<3%25-green?style=flat-square" alt="Hallucination Rate"/>
 </p>
 
 ---
 
-## 📋 Overview
+## Overview
 
-**DocuIntel** is an enterprise-grade Legal AI Assistant that leverages advanced AI orchestration and retrieval techniques to analyze contracts. Built with a **Next.js + Python hybrid architecture**, it features:
+DocuIntel is a full-stack legal AI assistant that analyzes contracts, identifies risks, generates redline suggestions, and simulates negotiation scenarios. Upload a PDF, DOCX, or TXT contract and get a complete risk audit with actionable recommendations.
 
-- 🎯 **96% Hybrid Retrieval Accuracy** (Dense + Sparse) with Reciprocal Rank Fusion (RRF).
-- 🤖 **Agentic Reasoning (ReAct)** for complex, multi-step contract analysis and self-correction.
-- 🕸️ **GraphRAG Integration**: Maps logical relationships (references, dependencies) between clauses for connected risk detection.
-- ⚡ **Case-Level Semantic Caching**: Instant sub-500ms results for recurring document audits, bypassing LLM costs entirely.
-- ⚖️ **Automated Evaluation** using LLM-as-a-Judge (Ragas) to ensure production-grade reliability.
-- 🔄 **Multi-Provider Fallback** with automatic failover across OpenAI, Nebius, SambaNova.
+**What it does:**
+- Segments contracts into individual clauses
+- Scores each clause for risk (critical, high, medium, low)
+- Generates redline rewrites with rationale
+- Simulates negotiation scenarios with probability and financial impact estimates
+- Tracks analysis metrics (latency, accuracy, success rate)
+- Stores cases in MongoDB for persistence and retrieval
 
 ---
 
-## 🏗️ System Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Client["🖥️ Client Layer"]
+    subgraph Client["Client Layer"]
         UI[Next.js React UI]
         Upload[Document Upload]
-        Logs[Agentic Logs Viewer]
-        Metrics[Performance Dashboard]
+        Dashboard[Analysis Dashboard]
     end
 
-    subgraph API["⚡ API Layer - Next.js"]
-        Auth[JWT Authentication]
-        Cache[Semantic Cache Service]
-        Routes[API Routes]
+    subgraph API["API Layer - Next.js"]
+        Auth[JWT Auth + Middleware]
+        CasesAPI["/api/cases"]
+        MetricsAPI["/api/metrics"]
+        NegotiateAPI["/api/negotiate"]
+        ReportsAPI["/api/reports"]
     end
 
-    subgraph Core["🧠 Agent Orchestration - Python"]
-        ReAct[ReAct Agentic Loop]
-        Planner[Planner Agent]
-        Router[Smart Model Router]
+    subgraph Services["Service Layer"]
+        RiskEngine[Risk Engine]
+        AIService[AI Service - Multi-Provider]
+        NegSim[Negotiation Simulator]
+        DocProcessor[Document Processor]
+        RAG[In-Memory Vector Store]
+        MetricsManager[Metrics Manager]
     end
 
-    subgraph MCP["🔧 MCP Tool Layer"]
-        HybridRAG[Hybrid Clause RAG]
-        GraphRAG[Clause GraphRAG]
-        Segmenter[Clause Segmenter]
-        RiskClassifier[Risk Classifier]
-        RedlineGen[Redline Generator]
+    subgraph Storage["Storage"]
+        MongoDB[(MongoDB Atlas)]
+        InMemory[In-Memory Fallback]
     end
 
-    subgraph Evaluation["⚖️ Eval Pipeline"]
-        Ragas[LLM-as-a-Judge]
-        Judge[Quality Gate]
-    end
-
-    subgraph Storage["💾 Storage Layer"]
-        MongoDB[(MongoDB)]
-        ChromaDB[(Chroma + BM25)]
-        FileStore[File Storage]
+    subgraph Optional["Optional - Python Backend"]
+        FastAPI[FastAPI Server]
+        AgentRouter[Agent Router]
+        ClauseGraph[Clause GraphRAG]
+        SemanticCache[Semantic Cache]
     end
 
     UI --> Auth
-    Auth --> Routes
-    Routes --> Cache
-    Cache --> ReAct
-    
-    ReAct --> Router
-    Router --> HybridRAG
-    Router --> RiskClassifier
-    
-    HybridRAG --> ChromaDB
-    
-    ReAct --> Evaluation
-    Evaluation --> Judge
+    Auth --> CasesAPI
+    CasesAPI --> RiskEngine
+    RiskEngine --> DocProcessor
+    RiskEngine --> AIService
+    RiskEngine --> NegSim
+    RiskEngine --> RAG
+    RiskEngine --> MetricsManager
+    AIService --> MongoDB
+    AIService --> InMemory
+    CasesAPI --> FastAPI
 ```
 
 ---
 
-## 🔄 Advanced Feature Flow
-
-### 1. Hybrid Retrieval (Dense + Sparse)
-Beyond simple vector search, DocuIntel uses **Reciprocal Rank Fusion (RRF)** to combine:
-- **Dense Retrieval**: Semantic understanding via `all-MiniLM-L6-v2`.
-- **Sparse Retrieval**: Keyword precision via `BM25`.
-- **Result**: High accuracy even for niche legal terminology.
-
-```mermaid
-graph LR
-    Query([User Query]) --> Dense[Dense Search: all-MiniLM]
-    Query --> Sparse[Sparse Search: BM25]
-    Dense --> RRF[RRF Fusion Layer]
-    Sparse --> RRF
-    RRF --> Final[Final Ranked Context]
-```
-
-### 2. Agentic Loops (ReAct)
-Unlike brittle linear chains, our **ReAct Loop** (Thought → Action → Observation) allows the agent to:
-1. **Think** about the contract structure.
-2. **Execute** a tool (e.g., segmenter).
-3. **Observe** the result and adapt (e.g., re-segment if gaps are found).
-
-```mermaid
-graph TD
-    Start((Start)) --> Thought[Thought: Analyze requirements]
-    Thought --> Action[Action: Call Tool]
-    Action --> Observation[Observation: Result from tool]
-    Observation --> Condition{Satisfied?}
-    Condition -- No --> Thought
-    Condition -- Yes --> Finish((Finish))
-```
-
-### 3. Case-Level Semantic Caching
-Beyond simple query caching, DocuIntel identifies "Case Signatures":
-- **Full Context Matching**: If the same document is uploaded with matching instructions, results are returned instantly.
-- **Search Logic**: Uses **Semantic Identity Matching** (Threshold: 0.95+) to find mirrored cases in the cache.
-- **Impact**: 100% reduction in LLM costs and near-zero latency for repetitive professional workflows.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Cache as Semantic Cache
-    participant AI as ReAct Engine
-    
-    User->>Cache: Submit Case (Doc + Prompt)
-    Cache->>Cache: Generate Case Signature
-    alt Cache Hit (Sim > 0.95)
-        Cache-->>User: Return Cached Analysis
-    else Cache Miss
-        Cache->>AI: Trigger Deep Audit
-        AI->>User: Streaming Analysis
-        AI->>Cache: Store Result
-    end
-```
-
-### 4. GraphRAG (Relationship Mapping)
-We don't just treat clauses as isolated text blocks. The **Clause Graph** tool:
-- **Maps Connections**: Identifies when "Section 5" references "Clause 2".
-- **Augments Reasoning**: The ReAct agent "traverses" this graph to find hidden conflicts or missing dependencies that standard RAG would miss.
-
-```mermaid
-graph LR
-    C1[Clause 1] -- References --> C2[Clause 2]
-    C3[Clause 3] -- Conflicts With --> C1
-    C2 -- Depends On --> C4[Clause 4]
-    
-    subgraph AgentReasoning ["🤖 Agent Graph Traversal"]
-        direction TB
-        Step1[Analyze C1] --> Step2[Discover Link to C2]
-        Step2 --> Step3[Validate Dependency C4]
-    end
-```
-
-### 4. LLM-as-a-Judge (Evaluation)
-We've replaced manual "vibe checks" with a **Ragas-powered pipeline**:
-- **Faithfulness**: Is the answer derived solely from the contract?
-- **Answer Relevancy**: Does it address the user's specific concern?
-- **Context Precision**: Did the RAG retrieve the right clauses?
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Frontend** | Next.js 14, React 18, TypeScript | Modern UI with SSR |
-| **Agentic Core** | ReAct Loops, DSPy (Prompt Opt) | Advanced Orchestration |
-| **Retrieval** | Hybrid (ChromaDB + BM25) | 96% Precision indexing |
-| **Relationship** | GraphRAG (NetworkX/Regex) | Logic-aware clause connections |
-| **Evaluation** | Ragas, DeepEval | Automated Quality Gates |
-| **Caching** | Semantic Cache (ChromaDB) | Full Case & Query Optimization |
-| **Tuning** | LoRA, DPO Skeletons | Domain-specific weight alignment |
+|-------|-----------|---------|
+| **Frontend** | Next.js 14, React 18, TypeScript | Dashboard UI with SSR |
+| **Styling** | Tailwind CSS, Framer Motion | Dark theme, animations |
+| **Charts** | Recharts | Risk distribution visualization |
+| **AI** | OpenAI API (gpt-4o-mini) | Clause analysis, risk scoring |
+| **Embeddings** | OpenAI text-embedding-3-small | Semantic clause retrieval |
+| **Database** | MongoDB Atlas + Mongoose | Case persistence |
+| **Auth** | JWT (jose) | Token-based authentication |
+| **Documents** | pdf-parse, mammoth | PDF and DOCX extraction |
+| **Python (optional)** | FastAPI, sentence-transformers | GPU-accelerated deep analysis |
 
 ---
 
-## ✨ Key Features
+## Features
 
-### 🤖 ReAct-Powered Intelligence
-- **Self-correcting flows**: If the agent detects a missing definition, it triggers a sub-search automatically.
-- **Explainable reasoning**: The UI displays the agent's "chain of thought" for full transparency.
+### Contract Analysis Pipeline
+Each uploaded document goes through: text extraction, clause segmentation, per-clause risk scoring via LLM, redline generation, and negotiation simulation. The entire pipeline is instrumented with logging and latency tracking.
 
-### 🎯 Hybrid RAG Precision
-- **RRF Fusion**: Optimal balance between semantic meaning and exact keyword matches.
-- **Citation tracking**: Every risk identified is linked back to the exact source clause.
+### Multi-Provider AI Fallback
+The AI service tries providers in order (OpenAI, then any configured fallbacks) and automatically fails over if one is unavailable. Responses are validated and coerced to prevent malformed LLM output from crashing the UI.
 
-### ⚡ Production-Grade Inference
-- **Semantic Caching**: Drastic reduction in TTFT (Time To First Token) for repeat analysis.
-- **Multi-Provider Failover**: Reliable GPT-4 intelligence with open-source backups.
+### Negotiation Simulator
+High-risk clauses automatically get three negotiation scenarios (best case, likely case, worst case) with probability percentages and estimated financial impact. Users can also open an interactive negotiation chat against AI-simulated opposing counsel.
+
+### Real-Time Metrics
+Every analysis step records latency, success/failure, and retrieval accuracy. The Intelligence tab shows live performance data pulled from the `/api/metrics` endpoint.
+
+### Vector Store
+Documents are chunked and embedded into an in-memory vector store for semantic clause retrieval during analysis. Stats (indexed chunks, embedding status) are visible in the Vector Store tab.
+
+### Case Management
+Cases are persisted to MongoDB Atlas with full analysis results (clauses, risks, redlines, reports, agent logs). The Cases page supports search, filtering by risk level, archiving, and metadata export.
+
+### Python Backend (Optional)
+A FastAPI backend in `autolawyer-mcp/` provides GPU-accelerated analysis with:
+- **Agent Router**: Multi-provider model selection with token budgets
+- **Clause GraphRAG**: Maps cross-references and dependencies between clauses
+- **Semantic Cache**: ChromaDB-backed cache to skip redundant LLM calls
+- **MCP Tools**: Clause segmenter, risk classifier, redline generator, report builder
+
+Enable it by toggling "Deep Analysis (GPU)" in the upload form.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Install dependencies
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas account (or local MongoDB)
+- OpenAI API key
+
+### 1. Clone and install
+
 ```bash
+git clone https://github.com/your-username/AutoLawyer.git
+cd AutoLawyer/nextjs-app
 npm install
-pip install -r requirements.txt
-pip install rank_bm25 ragas dspy-ai
 ```
 
-### 2. Run Evaluation
+### 2. Configure environment
+
 ```bash
-python scripts/eval_pipeline.py
+cp .env.example .env.local
+```
+
+Edit `.env.local` and fill in:
+
+```env
+OPENAI_API_KEY=your-openai-key
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/docuintel?retryWrites=true&w=majority
+```
+
+### 3. Run
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Upload a contract and click "Run Audit".
+
+### 4. (Optional) Python backend
+
+```bash
+cd autolawyer-mcp
+pip install -r requirements.txt
+python api/api.py
 ```
 
 ---
 
-## 📝 License
-MIT License - Developed for professional legal innovation.
+## API Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/cases` | POST | Upload document, run analysis |
+| `/api/cases` | GET | List all cases |
+| `/api/cases?case_id=xxx` | GET | Get single case |
+| `/api/cases/[id]/download` | GET | Download case report |
+| `/api/negotiate` | POST | Interactive negotiation chat |
+| `/api/reports` | POST | Generate export (HTML/TXT) |
+| `/api/reports/share` | POST | Create shareable report link |
+| `/api/metrics` | GET | Performance metrics |
+| `/api/health` | GET | Health check |
+| `/api/settings` | GET/POST | User preferences |
+| `/api/auth/demo-token` | GET | Dev mode auth token |
+| `/api/providers` | GET | List AI provider status |
+
+---
+
+## Project Structure
+
+```
+nextjs-app/
+  app/
+    api/                  # API routes
+    components/           # Page-level components
+    dashboard/            # Dashboard pages (overview, cases, settings)
+  components/
+    ui/                   # Shared UI components (diff-viewer, risk-chart, layout)
+    modals/               # Modal dialogs (negotiation)
+  lib/
+    services/             # Core services (risk-engine, ai-service, negotiation-simulator, langchain-rag)
+    db/                   # MongoDB connection and models
+    metrics.ts            # Performance tracking
+    auth.ts               # JWT authentication
+  autolawyer-mcp/         # Optional Python backend
+    agent/                # Agent core, router, policies
+    mcp_tools/            # Clause RAG, graph, report builder
+    services/             # Semantic cache
+    api/                  # FastAPI server
+```
+
+---
+
+## Supported Document Formats
+
+- **PDF** (.pdf) via pdf-parse
+- **Word** (.docx) via mammoth
+- **Plain text** (.txt)
+
+---
+
+## License
+
+MIT
