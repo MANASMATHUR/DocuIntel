@@ -49,18 +49,21 @@ const MOCK_RISK_ANALYSIS = {
 };
 
 export class AIService {
-    private providers: OpenAI[] = [];
+    private providers: { client: OpenAI; config: ProviderConfig }[] = [];
     private activeProviderIndex: number = 0;
+    private pythonBackendBaseUrl: string;
 
     constructor() {
-        // Initialize all available providers
+        this.pythonBackendBaseUrl = process.env.AUTOLAWYER_PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
+
+        // Initialize all available providers (keeping client + config paired)
         for (const config of PROVIDERS) {
             if (config.apiKey) {
                 const client = new OpenAI({
                     apiKey: config.apiKey,
                     baseURL: config.baseURL,
                 });
-                this.providers.push(client);
+                this.providers.push({ client, config });
                 console.log(`✅ Initialized ${config.name} provider`);
             } else {
                 console.warn(`⚠️  ${config.name} API key not found, skipping`);
@@ -84,13 +87,12 @@ export class AIService {
         // Try each provider in order until one succeeds
         for (let i = 0; i < this.providers.length; i++) {
             const providerIndex = (this.activeProviderIndex + i) % this.providers.length;
-            const provider = this.providers[providerIndex];
-            const config = PROVIDERS.filter(p => p.apiKey)[providerIndex];
+            const { client, config } = this.providers[providerIndex];
 
             try {
                 console.log(`🤖 Attempting analysis with ${config.name}...`);
 
-                const completion = await provider.chat.completions.create({
+                const completion = await client.chat.completions.create({
                     model: config.model,
                     messages: [
                         {
@@ -140,41 +142,102 @@ Return a JSON object with:
      * Call the local Python backend for deep analysis (GPU-accelerated)
      */
     async analyzeWithPythonBackend(file: File, instructions: string): Promise<any> {
+        const health = await this.checkPythonBackend();
+        if (!health.ok) {
+            throw new Error(`GPU backend unavailable: ${health.reason}`);
+        }
+
         const formData = new FormData();
         formData.append('primary_docs', file);
         formData.append('instructions', instructions);
 
-        try {
+        const startTime = Date.now();
+        const maxAttempts = 2;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-            const response = await fetch('http://localhost:8000/api/cases', {
-                method: 'POST',
-                body: formData,
-                signal: controller.signal,
-            });
+            try {
+                console.log(`🚀 Connecting to AutoLawyer Backend (attempt ${attempt}/${maxAttempts})...`);
+                const response = await fetch(`${this.pythonBackendBaseUrl}/api/cases`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal,
+                });
+                clearTimeout(timeoutId);
 
-            clearTimeout(timeoutId);
+                const latency = Date.now() - startTime;
+                const { metrics } = await import('../metrics');
+                metrics.recordLatency(latency, 'python_backend_analysis');
 
-            if (!response.ok) {
-                throw new Error(`Python backend error: ${response.statusText}`);
+                if (!response.ok) {
+                    metrics.recordRequest(false);
+                    throw new Error(`Python backend error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                metrics.recordRequest(true);
+                return data;
+            } catch (error: any) {
+                clearTimeout(timeoutId);
+                console.error('Python backend connection failed:', error);
+                if (attempt === maxAttempts) {
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        console.error("💡 Is the Python backend running? Run 'python autolawyer-mcp/api/api.py'");
+                    }
+                    throw error;
+                }
             }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Python backend connection failed:', error);
-            throw error;
         }
+    }
+
+    async checkPythonBackend(): Promise<{ ok: boolean; reason?: string }> {
+        const healthPaths = ['/api/health', '/health'];
+        let lastReason = 'health check failed';
+
+        for (const path of healthPaths) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            try {
+                const response = await fetch(`${this.pythonBackendBaseUrl}${path}`, {
+                    method: 'GET',
+                    signal: controller.signal,
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    lastReason = `${path} returned ${response.status}`;
+                    continue;
+                }
+
+                const body = await response.json().catch(() => ({}));
+                const status = typeof body?.status === 'string' ? body.status.toLowerCase() : '';
+                if (status === 'ok' || status === 'healthy' || status === 'running' || status === '') {
+                    return { ok: true };
+                }
+                lastReason = `${path} returned unhealthy status: ${status}`;
+            } catch (error: any) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    lastReason = `${path} timed out`;
+                    continue;
+                }
+                lastReason = `${path} not reachable`;
+            }
+        }
+
+        return { ok: false, reason: lastReason };
     }
 
     /**
      * Get status of all providers
      */
     getProviderStatus() {
-        return PROVIDERS.map((config, index) => ({
+        return this.providers.map(({ config }, index) => ({
             name: config.name,
             available: !!config.apiKey,
-            active: index === this.activeProviderIndex && !!config.apiKey,
+            active: index === this.activeProviderIndex,
             model: config.model,
             tokenBudget: config.tokenBudget,
         }));

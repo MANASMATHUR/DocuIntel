@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/autolawyer';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/autolawyer';
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -20,14 +20,16 @@ async function dbConnect() {
 
     if (!cached.promise) {
         const opts = {
-            bufferCommands: false,
+            bufferCommands: true,
+            serverSelectionTimeoutMS: 3000, // Fail fast if MongoDB not running
+            connectTimeoutMS: 3000,
         };
 
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
             return mongoose;
         }).catch((error) => {
             cached.promise = null;
-            console.error('MongoDB connection error:', error);
+            console.warn('MongoDB unavailable:', error.message);
             throw error;
         });
     }

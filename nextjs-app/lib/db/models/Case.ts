@@ -28,6 +28,9 @@ const CaseSchema = new mongoose.Schema({
     redlines: mongoose.Schema.Types.Mixed,
     reports: mongoose.Schema.Types.Mixed,
     summary: mongoose.Schema.Types.Mixed,
+    logs: [mongoose.Schema.Types.Mixed],
+    vectorStats: mongoose.Schema.Types.Mixed,
+    analysis_meta: mongoose.Schema.Types.Mixed,
 }, { timestamps: true });
 
 export default mongoose.models.Case || mongoose.model('Case', CaseSchema);

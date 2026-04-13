@@ -273,12 +273,10 @@ class MetricsManager {
     }
 }
 
-// Export singleton instance
-export const metrics = new MetricsManager();
-
-// Initialize metrics manager
-// Note: Data will accumulate as the user interacts with the application.
-// metrics.simulateBenchmarkMetrics(); // DISABLED: Real metrics only.
+// Persist singleton across Next.js hot reloads via global
+const globalForMetrics = global as any;
+export const metrics: MetricsManager = globalForMetrics.__metricsManager ?? new MetricsManager();
+globalForMetrics.__metricsManager = metrics;
 
 
 /**
