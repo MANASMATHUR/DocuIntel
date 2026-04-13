@@ -14,17 +14,25 @@ export async function GET() {
       `python "${pythonScript}"`,
       { cwd: projectRoot }
     )
-    const health = JSON.parse(stdout)
+    let health;
+    try {
+      health = JSON.parse(stdout)
+    } catch {
+      return NextResponse.json(
+        { status: 'degraded', error: 'Invalid response from Python service', raw: stdout.slice(0, 200) },
+        { status: 503 }
+      )
+    }
     return NextResponse.json(health)
   } catch (error) {
     return NextResponse.json(
       {
-        status: 'healthy',
+        status: 'degraded',
         providers_available: 0,
         offline_mode: true,
         error: 'Python service not available',
       },
-      { status: 200 }
+      { status: 503 }
     )
   }
 }

@@ -27,7 +27,7 @@ const PUBLIC_ROUTES = [
 /**
  * Middleware function to handle authentication and CORS
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Handle CORS preflight requests
@@ -42,21 +42,23 @@ export function middleware(request: NextRequest) {
 
     // Check if route requires authentication
     if (isProtectedRoute(pathname)) {
-        const authResult = checkAuthentication(request);
+        const authResult = await checkAuthentication(request);
         if (!authResult.success) {
-            // For placement readiness: In development, we log a warning but allow the request 
-            // to proceed to avoid breaking the UI for the user.
-            // In production, this would be a hard 401.
-            console.warn(`[Middleware] Unauthorized access to ${pathname}: ${authResult.error}`);
-
-            // Allow if it's a local development environment (optional)
-            // return NextResponse.next(); 
-
-            // BUT to show it "works", let's be strict for /api/cases but allow others for now?
-            // Actually, let's allow it so the user can use the app, but add a header that it's unverified.
-            const response = addCORSHeaders(NextResponse.next());
-            response.headers.set('X-Auth-Status', 'unverified-dev-mode');
-            return response;
+            const isDev = process.env.NODE_ENV === 'development';
+            if (isDev) {
+                // In development, allow requests but mark as unverified
+                console.warn(`[Middleware] Dev mode - allowing unauthenticated access to ${pathname}`);
+                const response = addCORSHeaders(NextResponse.next());
+                response.headers.set('X-Auth-Status', 'unverified-dev-mode');
+                return response;
+            }
+            // In production, reject unauthorized requests
+            return addCORSHeaders(
+                NextResponse.json(
+                    { error: 'Unauthorized', message: authResult.error },
+                    { status: 401 }
+                )
+            );
         }
     }
 
@@ -83,7 +85,7 @@ function isPublicRoute(pathname: string): boolean {
 /**
  * Validates authentication token
  */
-function checkAuthentication(request: NextRequest): { success: boolean; error?: string } {
+async function checkAuthentication(request: NextRequest): Promise<{ success: boolean; error?: string }> {
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader) {
@@ -96,23 +98,9 @@ function checkAuthentication(request: NextRequest): { success: boolean; error?: 
 
     const token = authHeader.substring(7);
 
-    if (!token || token.length < 10) {
-        return { success: false, error: 'Invalid token provided' };
-    }
-
-    // For demo purposes, accept any well-formed token
-    // In production, implement proper JWT validation
-    try {
-        const parts = token.split('.');
-        if (parts.length < 2) {
-            return { success: false, error: 'Malformed token' };
-        }
-
-        // Basic token structure validation
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: 'Token validation failed' };
-    }
+    // Dynamic import to use the updated auth module
+    const { validateToken } = await import('./lib/auth');
+    return await validateToken(token);
 }
 
 /**

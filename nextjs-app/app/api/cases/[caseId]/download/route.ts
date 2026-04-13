@@ -9,11 +9,17 @@ export async function GET(
   { params }: { params: { caseId: string } }
 ) {
   try {
+    // Validate caseId to prevent command injection
+    const caseId = params.caseId;
+    if (!/^[a-zA-Z0-9_-]+$/.test(caseId)) {
+      return NextResponse.json({ error: 'Invalid case ID format' }, { status: 400 });
+    }
+
     const { join } = await import('path')
     const projectRoot = join(process.cwd(), '..', '..')
     const pythonScript = join(projectRoot, 'autolawyer-mcp', 'services', 'get_exec_summary.py')
     const { stdout } = await execAsync(
-      `python "${pythonScript}" '${params.caseId}'`,
+      `python "${pythonScript}" "${caseId}"`,
       { cwd: projectRoot }
     )
     const summary = stdout

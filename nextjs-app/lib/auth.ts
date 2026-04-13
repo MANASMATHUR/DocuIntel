@@ -1,18 +1,20 @@
 /**
  * JWT Authentication Module for DocuIntel
  * 
- * Provides secure token-based authentication for API endpoints.
+ * Provides secure token-based authentication for API endpoints using established libraries.
  * Supports token generation, validation, and refresh mechanisms.
  * 
  * @module lib/auth
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { SignJWT, jwtVerify } from 'jose';
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'docuintel-default-secret-change-in-production';
-const TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SECRET_KEY = new TextEncoder().encode(JWT_SECRET);
+const TOKEN_EXPIRY = '24h';
+const REFRESH_TOKEN_EXPIRY = '7d';
 
 /**
  * User payload structure for JWT tokens
@@ -43,128 +45,47 @@ export interface AuthResult {
 }
 
 /**
- * Simple Base64 encoding/decoding utilities for JWT-like tokens
- * Note: In production, use proper JWT library like 'jose' or 'jsonwebtoken'
- */
-const base64Encode = (data: string): string => {
-    return Buffer.from(data).toString('base64url');
-};
-
-const base64Decode = (encoded: string): string => {
-    return Buffer.from(encoded, 'base64url').toString('utf-8');
-};
-
-/**
- * Creates a simple HMAC-like signature using the secret
- * Note: In production, use proper cryptographic signing
- */
-const createSignature = (payload: string): string => {
-    const crypto = require('crypto');
-    return crypto.createHmac('sha256', JWT_SECRET).update(payload).digest('base64url');
-};
-
-/**
  * Generates an access token for authenticated users
- * 
- * @param user - User payload to encode in the token
- * @returns Access token string
- * 
- * @example
- * ```typescript
- * const token = generateAccessToken({
- *   userId: 'user123',
- *   email: 'user@example.com',
- *   role: 'user',
- *   permissions: ['read', 'write']
- * });
- * ```
  */
-export function generateAccessToken(user: UserPayload): string {
-    const header = { alg: 'HS256', typ: 'JWT' };
-    const payload = {
-        ...user,
-        iat: Date.now(),
-        exp: Date.now() + TOKEN_EXPIRY,
-        type: 'access'
-    };
-
-    const headerBase64 = base64Encode(JSON.stringify(header));
-    const payloadBase64 = base64Encode(JSON.stringify(payload));
-    const signature = createSignature(`${headerBase64}.${payloadBase64}`);
-
-    return `${headerBase64}.${payloadBase64}.${signature}`;
+export async function generateAccessToken(user: UserPayload): Promise<string> {
+    return await new SignJWT({ ...user, type: 'access' })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime(TOKEN_EXPIRY)
+        .sign(SECRET_KEY);
 }
 
 /**
  * Generates a refresh token for token renewal
- * 
- * @param userId - User ID to associate with refresh token
- * @returns Refresh token string
  */
-export function generateRefreshToken(userId: string): string {
-    const payload = {
-        userId,
-        iat: Date.now(),
-        exp: Date.now() + REFRESH_TOKEN_EXPIRY,
-        type: 'refresh'
-    };
-
-    const payloadBase64 = base64Encode(JSON.stringify(payload));
-    const signature = createSignature(payloadBase64);
-
-    return `${payloadBase64}.${signature}`;
+export async function generateRefreshToken(userId: string): Promise<string> {
+    return await new SignJWT({ userId, type: 'refresh' })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime(REFRESH_TOKEN_EXPIRY)
+        .sign(SECRET_KEY);
 }
 
 /**
  * Generates both access and refresh tokens
- * 
- * @param user - User payload for token generation
- * @returns TokenPair with both tokens
  */
-export function generateTokenPair(user: UserPayload): TokenPair {
+export async function generateTokenPair(user: UserPayload): Promise<TokenPair> {
+    const accessToken = await generateAccessToken(user);
+    const refreshToken = await generateRefreshToken(user.userId);
+
     return {
-        accessToken: generateAccessToken(user),
-        refreshToken: generateRefreshToken(user.userId),
-        expiresIn: TOKEN_EXPIRY
+        accessToken,
+        refreshToken,
+        expiresIn: 24 * 60 * 60 * 1000 // 24 hours
     };
 }
 
 /**
  * Validates an access token and extracts user payload
- * 
- * @param token - JWT token to validate
- * @returns AuthResult with success status and user data
- * 
- * @example
- * ```typescript
- * const result = validateToken(request.headers.get('Authorization')?.split(' ')[1]);
- * if (result.success) {
- *   console.log('Authenticated user:', result.user);
- * }
- * ```
  */
-export function validateToken(token: string): AuthResult {
+export async function validateToken(token: string): Promise<AuthResult> {
     try {
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-            return { success: false, error: 'Invalid token format' };
-        }
-
-        const [headerBase64, payloadBase64, signature] = parts;
-
-        // Verify signature
-        const expectedSignature = createSignature(`${headerBase64}.${payloadBase64}`);
-        if (signature !== expectedSignature) {
-            return { success: false, error: 'Invalid token signature' };
-        }
-
-        // Decode and parse payload
-        const payload = JSON.parse(base64Decode(payloadBase64));
-
-        // Check expiration
-        if (payload.exp && payload.exp < Date.now()) {
-            return { success: false, error: 'Token expired' };
-        }
+        const { payload } = await jwtVerify(token, SECRET_KEY);
 
         // Check token type
         if (payload.type !== 'access') {
@@ -174,10 +95,10 @@ export function validateToken(token: string): AuthResult {
         return {
             success: true,
             user: {
-                userId: payload.userId,
-                email: payload.email,
-                role: payload.role,
-                permissions: payload.permissions
+                userId: payload.userId as string,
+                email: payload.email as string,
+                role: payload.role as 'user' | 'admin' | 'viewer',
+                permissions: payload.permissions as string[]
             }
         };
     } catch (error) {
@@ -187,39 +108,17 @@ export function validateToken(token: string): AuthResult {
 
 /**
  * Validates a refresh token
- * 
- * @param token - Refresh token to validate
- * @returns Object with success status and userId
  */
-export function validateRefreshToken(token: string): { success: boolean; userId?: string; error?: string } {
+export async function validateRefreshToken(token: string): Promise<{ success: boolean; userId?: string; error?: string }> {
     try {
-        const parts = token.split('.');
-        if (parts.length !== 2) {
-            return { success: false, error: 'Invalid refresh token format' };
-        }
-
-        const [payloadBase64, signature] = parts;
-
-        // Verify signature
-        const expectedSignature = createSignature(payloadBase64);
-        if (signature !== expectedSignature) {
-            return { success: false, error: 'Invalid refresh token signature' };
-        }
-
-        // Decode and parse payload
-        const payload = JSON.parse(base64Decode(payloadBase64));
-
-        // Check expiration
-        if (payload.exp && payload.exp < Date.now()) {
-            return { success: false, error: 'Refresh token expired' };
-        }
+        const { payload } = await jwtVerify(token, SECRET_KEY);
 
         // Check token type
         if (payload.type !== 'refresh') {
             return { success: false, error: 'Invalid token type' };
         }
 
-        return { success: true, userId: payload.userId };
+        return { success: true, userId: payload.userId as string };
     } catch (error) {
         return { success: false, error: 'Refresh token validation failed' };
     }
@@ -227,9 +126,6 @@ export function validateRefreshToken(token: string): { success: boolean; userId?
 
 /**
  * Extracts the Bearer token from Authorization header
- * 
- * @param request - Next.js request object
- * @returns Token string or null if not found
  */
 export function extractBearerToken(request: NextRequest): string | null {
     const authHeader = request.headers.get('Authorization');
@@ -241,37 +137,19 @@ export function extractBearerToken(request: NextRequest): string | null {
 
 /**
  * Authentication middleware for API routes
- * 
- * @param request - Next.js request object
- * @returns AuthResult with authenticated user or error
- * 
- * @example
- * ```typescript
- * export async function GET(request: NextRequest) {
- *   const auth = await authenticateRequest(request);
- *   if (!auth.success) {
- *     return NextResponse.json({ error: auth.error }, { status: 401 });
- *   }
- *   // Proceed with authenticated request
- *   const user = auth.user;
- * }
- * ```
  */
-export function authenticateRequest(request: NextRequest): AuthResult {
+export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
     const token = extractBearerToken(request);
-    
+
     if (!token) {
         return { success: false, error: 'No authentication token provided' };
     }
 
-    return validateToken(token);
+    return await validateToken(token);
 }
 
 /**
  * Creates an unauthorized response
- * 
- * @param message - Error message to include
- * @returns NextResponse with 401 status
  */
 export function unauthorizedResponse(message: string = 'Unauthorized'): NextResponse {
     return NextResponse.json(
@@ -282,9 +160,6 @@ export function unauthorizedResponse(message: string = 'Unauthorized'): NextResp
 
 /**
  * Creates a forbidden response
- * 
- * @param message - Error message to include
- * @returns NextResponse with 403 status
  */
 export function forbiddenResponse(message: string = 'Forbidden'): NextResponse {
     return NextResponse.json(
@@ -295,10 +170,6 @@ export function forbiddenResponse(message: string = 'Forbidden'): NextResponse {
 
 /**
  * Checks if user has required permission
- * 
- * @param user - User payload to check
- * @param permission - Required permission string
- * @returns Boolean indicating if user has permission
  */
 export function hasPermission(user: UserPayload, permission: string): boolean {
     if (user.role === 'admin') return true;
@@ -312,11 +183,6 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 /**
  * Simple rate limiting check
- * 
- * @param identifier - Unique identifier (IP, user ID, etc.)
- * @param limit - Maximum requests allowed
- * @param windowMs - Time window in milliseconds
- * @returns Boolean indicating if request should be allowed
  */
 export function checkRateLimit(
     identifier: string,
@@ -352,6 +218,6 @@ export const DEMO_USER: UserPayload = {
 /**
  * Generates demo tokens for development
  */
-export function generateDemoTokens(): TokenPair {
-    return generateTokenPair(DEMO_USER);
+export async function generateDemoTokens(): Promise<TokenPair> {
+    return await generateTokenPair(DEMO_USER);
 }

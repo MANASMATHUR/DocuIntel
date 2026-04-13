@@ -17,7 +17,7 @@ import { generateDemoTokens, DEMO_USER } from '@/lib/auth';
  */
 export async function GET(request: NextRequest) {
     try {
-        const tokens = generateDemoTokens();
+        const tokens = await generateDemoTokens();
 
         return NextResponse.json({
             ...tokens,
