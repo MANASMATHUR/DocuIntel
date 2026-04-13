@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Bell, Lock, User, Monitor, Save, Loader2 } from 'lucide-react';
+import { Bell, User, Monitor, Save, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { DashboardLayout } from '@/components/ui/dashboard-layout';
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [workspaceTab, setWorkspaceTab] = useState('overview');
+    const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [settings, setSettings] = useState({
         profile: {
             fullName: '',
@@ -24,10 +27,26 @@ export default function SettingsPage() {
     });
 
     useEffect(() => {
-        fetchSettings();
-    }, []);
+        if (settings.appearance.compactMode) {
+            document.body.classList.add('density-compact');
+        } else {
+            document.body.classList.remove('density-compact');
+        }
+    }, [settings.appearance.compactMode]);
 
-    const fetchSettings = async () => {
+    // Apply theme to <html> element
+    useEffect(() => {
+        const html = document.documentElement;
+        html.classList.remove('theme-light');
+        if (settings.appearance.theme === 'Light') {
+            html.classList.add('theme-light');
+        } else if (settings.appearance.theme === 'System') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (!prefersDark) html.classList.add('theme-light');
+        }
+    }, [settings.appearance.theme]);
+
+    const fetchSettings = useCallback(async () => {
         try {
             const res = await fetch('/api/settings');
             if (!res.ok) {
@@ -38,11 +57,11 @@ export default function SettingsPage() {
             const data = await res.json();
             if (data && !data.error) {
                 // Merge with existing settings structure
-                setSettings({
-                    profile: data.profile || settings.profile,
-                    notifications: data.notifications || settings.notifications,
-                    appearance: data.appearance || settings.appearance,
-                });
+                setSettings((prev) => ({
+                    profile: data.profile || prev.profile,
+                    notifications: data.notifications || prev.notifications,
+                    appearance: data.appearance || prev.appearance,
+                }));
             }
         } catch (error) {
             console.error('Failed to fetch settings:', error);
@@ -50,7 +69,11 @@ export default function SettingsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -68,36 +91,46 @@ export default function SettingsPage() {
             if (data.error) {
                 throw new Error(data.error);
             }
-            // Show success message
-            alert('Settings saved successfully!');
+            setNotice({ type: 'success', text: 'Settings saved successfully.' });
         } catch (error: any) {
             console.error('Failed to save settings:', error);
-            alert(error.message || 'Failed to save settings. Please try again.');
+            setNotice({ type: 'error', text: error.message || 'Failed to save settings. Please try again.' });
         } finally {
             setSaving(false);
         }
     };
 
     if (loading) {
-        return <div className="text-center py-12 text-gray-400">Loading settings...</div>;
+        return (
+            <DashboardLayout activeTab={workspaceTab} onTabChange={setWorkspaceTab}>
+                <div className="text-center py-12 text-text-dim">Loading settings...</div>
+            </DashboardLayout>
+        );
     }
 
     return (
-        <div className="space-y-8">
+        <DashboardLayout activeTab={workspaceTab} onTabChange={setWorkspaceTab}>
+        <div className="space-y-8 max-w-[1000px]">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-                    <p className="text-gray-400">Manage your account preferences and application settings</p>
+                    <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Settings</h1>
+                    <p className="text-text-secondary">Manage your account preferences and application settings.</p>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                     Save Changes
                 </button>
             </div>
+            {notice && (
+                <div className={`p-4 rounded-xl border flex items-center gap-3 ${notice.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-rose-500/30 bg-rose-500/10 text-rose-300'}`}>
+                    {notice.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+                    <span className="text-sm">{notice.text}</span>
+                </div>
+            )}
 
             <div className="grid gap-6">
                 {/* Profile Section */}
@@ -108,32 +141,32 @@ export default function SettingsPage() {
                     className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
+                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
                             <User size={24} />
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-white">Profile Information</h2>
-                            <p className="text-sm text-gray-400">Update your personal details</p>
+                            <p className="text-sm text-text-dim">Update your personal details</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Full Name</label>
+                            <label className="text-sm font-medium text-text-secondary">Full Name</label>
                             <input
                                 type="text"
                                 value={settings.profile.fullName}
                                 onChange={(e) => setSettings({ ...settings, profile: { ...settings.profile, fullName: e.target.value } })}
-                                className="w-full px-4 py-2 rounded-lg bg-black/20 border border-white/10 text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                                className="w-full px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Email Address</label>
+                            <label className="text-sm font-medium text-text-secondary">Email Address</label>
                             <input
                                 type="email"
                                 value={settings.profile.email}
                                 onChange={(e) => setSettings({ ...settings, profile: { ...settings.profile, email: e.target.value } })}
-                                className="w-full px-4 py-2 rounded-lg bg-black/20 border border-white/10 text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                                className="w-full px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors"
                             />
                         </div>
                     </div>
@@ -147,20 +180,20 @@ export default function SettingsPage() {
                     className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
+                        <div className="p-3 rounded-lg bg-accent/10 text-accent">
                             <Bell size={24} />
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-white">Notifications</h2>
-                            <p className="text-sm text-gray-400">Configure how you receive alerts</p>
+                            <p className="text-sm text-text-dim">Configure how you receive alerts</p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 rounded-lg bg-black/20">
+                        <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03]">
                             <div>
                                 <p className="font-medium text-white">Email Notifications</p>
-                                <p className="text-sm text-gray-400">Receive updates about your cases via email</p>
+                                <p className="text-sm text-text-dim">Receive updates about your cases via email</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -169,7 +202,7 @@ export default function SettingsPage() {
                                     onChange={(e) => setSettings({ ...settings, notifications: { ...settings.notifications, email: e.target.checked } })}
                                     className="sr-only peer"
                                 />
-                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                             </label>
                         </div>
                     </div>
@@ -183,31 +216,50 @@ export default function SettingsPage() {
                     className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-pink-500/10 text-pink-400">
+                        <div className="p-3 rounded-lg bg-success/10 text-success">
                             <Monitor size={24} />
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-white">Appearance</h2>
-                            <p className="text-sm text-gray-400">Customize the interface</p>
+                            <p className="text-sm text-text-dim">Customize the interface and workspace density</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
                         {['Dark', 'Light', 'System'].map((theme) => (
                             <button
                                 key={theme}
                                 onClick={() => setSettings({ ...settings, appearance: { ...settings.appearance, theme } })}
                                 className={`p-4 rounded-lg border ${settings.appearance.theme === theme
-                                        ? 'bg-blue-500/10 border-blue-500/50 text-blue-400'
-                                        : 'bg-black/20 border-white/10 text-gray-400 hover:bg-white/5'
+                                        ? 'bg-primary/10 border-primary/50 text-primary'
+                                        : 'bg-white/[0.03] border-white/10 text-text-dim hover:bg-white/5'
                                     } transition-all`}
                             >
                                 {theme}
                             </button>
                         ))}
                     </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03]">
+                        <div>
+                            <p className="font-medium text-white">Compact Density</p>
+                            <p className="text-sm text-text-dim">Reduce spacing to fit more content on-screen</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={settings.appearance.compactMode}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    appearance: { ...settings.appearance, compactMode: e.target.checked },
+                                })}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-white/10 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:bg-primary" />
+                        </label>
+                    </div>
                 </motion.div>
             </div>
         </div>
+        </DashboardLayout>
     );
 }

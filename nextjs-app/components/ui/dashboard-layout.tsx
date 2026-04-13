@@ -2,81 +2,146 @@
 
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, FileText, Activity, Settings } from 'lucide-react';
-import Link from 'next/link';
+import { Shield, FileText, Activity, Settings, LayoutDashboard, Database, ChevronRight, FolderOpen } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface DashboardLayoutProps {
     children: ReactNode;
+    activeTab: string;
+    onTabChange: (tab: string) => void;
+    currentTab?: string;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, activeTab, onTabChange }: DashboardLayoutProps) {
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const inWorkspaceRoute = pathname === '/dashboard';
+
+    const goToWorkspaceTab = (tab: string) => {
+        if (!inWorkspaceRoute) {
+            router.push('/dashboard');
+        }
+        onTabChange(tab);
+    };
+
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-bg">
             {/* Sidebar */}
-            <aside className="fixed left-0 top-0 h-full w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 z-50">
-                <div className="p-6 border-b border-white/10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-white" />
+            <aside className="fixed left-0 top-0 bottom-0 w-60 border-r border-divider bg-bg-surface z-50 flex flex-col">
+                <div className="px-5 py-5 border-b border-divider">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
+                            <Shield className="w-4 h-4 text-text-inverse" />
                         </div>
-                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                            DocuIntel
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-base font-semibold tracking-tight text-text">DocuIntel</span>
+                            <span className="text-[10px] font-mono uppercase tracking-wide text-text-dim">Legal AI</span>
+                        </div>
                     </div>
                 </div>
 
-                <nav className="p-4 space-y-2">
-                    <NavItem href="/dashboard" icon={<Activity />} label="Overview" active />
-                    <NavItem href="/dashboard/cases" icon={<FileText />} label="Cases" />
-                    <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" />
+                <nav className="flex-1 px-3 py-4 space-y-0.5">
+                    <NavItem
+                        onClick={() => goToWorkspaceTab('overview')}
+                        icon={<LayoutDashboard size={18} />}
+                        label="Overview"
+                        active={inWorkspaceRoute && activeTab === 'overview'}
+                    />
+                    <NavItem
+                        onClick={() => goToWorkspaceTab('audit')}
+                        icon={<FileText size={18} />}
+                        label="Case Audit"
+                        active={inWorkspaceRoute && activeTab === 'audit'}
+                    />
+                    <NavItem
+                        onClick={() => goToWorkspaceTab('vector')}
+                        icon={<Database size={18} />}
+                        label="Vector Store"
+                        active={inWorkspaceRoute && activeTab === 'vector'}
+                    />
+                    <NavItem
+                        onClick={() => goToWorkspaceTab('intelligence')}
+                        icon={<Activity size={18} />}
+                        label="Intelligence"
+                        active={inWorkspaceRoute && activeTab === 'intelligence'}
+                    />
+                    <NavItem
+                        onClick={() => router.push('/dashboard/cases')}
+                        icon={<FolderOpen size={18} />}
+                        label="Cases"
+                        active={pathname === '/dashboard/cases'}
+                    />
+                    <NavItem
+                        onClick={() => router.push('/dashboard/settings')}
+                        icon={<Settings size={18} />}
+                        label="Settings"
+                        active={pathname === '/dashboard/settings'}
+                    />
                 </nav>
 
-                <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-500" />
-                        <div>
-                            <p className="text-sm font-medium">Demo User</p>
-                            <p className="text-xs text-gray-400">Pro Plan</p>
+                <div className="px-3 py-4 border-t border-divider">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-hover transition-colors cursor-pointer group">
+                        <div className="w-8 h-8 rounded-full bg-bg-subtle border border-divider flex items-center justify-center font-semibold text-[11px] text-text">
+                            DU
                         </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate text-text">Demo User</p>
+                            <p className="text-[10px] text-accent font-mono tracking-wide uppercase">Active</p>
+                        </div>
+                        <ChevronRight size={14} className="text-text-dim group-hover:text-text transition-colors" />
                     </div>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="pl-64 min-h-screen">
-                <div className="max-w-7xl mx-auto p-8">
+            {/* Main Content Area */}
+            <div className="pl-60 flex flex-col min-h-screen">
+                {/* Header */}
+                <header className="h-14 border-b border-divider flex items-center justify-between px-8 bg-bg-surface/80 backdrop-blur-xl sticky top-0 z-40">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono text-text-dim uppercase tracking-wide">Dashboard</span>
+                        <span className="text-text-dim">/</span>
+                        <span className="text-xs font-mono text-accent uppercase tracking-wide font-medium">
+                            {pathname === '/dashboard/cases' ? 'Cases' : pathname === '/dashboard/settings' ? 'Settings' : 'Workspace'}
+                        </span>
+                    </div>
+
+                    <button
+                        onClick={() => router.push('/dashboard/settings')}
+                        className="p-2 hover:bg-bg-hover rounded-lg transition-colors"
+                        aria-label="Open settings"
+                    >
+                        <Settings size={16} className="text-text-secondary" />
+                    </button>
+                </header>
+
+                <main className="flex-1 p-8">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     >
                         {children}
                     </motion.div>
-                </div>
-            </main>
+                </main>
+            </div>
         </div>
     );
 }
 
-function NavItem({ href, icon, label, active }: { href: string; icon: ReactNode; label: string; active?: boolean }) {
+function NavItem({ onClick, icon, label, active }: { onClick: () => void; icon: ReactNode; label: string; active?: boolean }) {
     return (
-        <Link
-            href={href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${active
-                ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+        <button
+            onClick={onClick}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all group ${active
+                    ? 'text-text bg-bg-subtle border border-divider'
+                    : 'text-text-secondary hover:text-text hover:bg-bg-hover'
                 }`}
         >
-            <span className={`group-hover:scale-110 transition-transform ${active ? 'text-blue-400' : ''}`}>
+            <span className={`transition-colors ${active ? 'text-accent' : 'text-text-secondary group-hover:text-text'}`}>
                 {icon}
             </span>
-            <span className="font-medium">{label}</span>
-            {active && (
-                <motion.div
-                    layoutId="active-pill"
-                    className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"
-                />
-            )}
-        </Link>
+            <span className="text-sm font-medium">{label}</span>
+        </button>
     );
 }

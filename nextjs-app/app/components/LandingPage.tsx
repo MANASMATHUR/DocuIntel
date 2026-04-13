@@ -5,14 +5,11 @@ import Link from 'next/link'
 import {
     Building2,
     Shield,
-    Zap,
     Brain,
     BarChart3,
     GitBranch,
-    Target,
     CheckCircle2,
-    ArrowRight,
-    Github
+    ArrowRight
 } from 'lucide-react'
 
 export default function LandingPage() {
@@ -31,14 +28,9 @@ export default function LandingPage() {
 
                     {/* Nav */}
                     <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-text-secondary">
-                        <a href="#product" className="hover:text-text transition-colors">Product</a>
-                        <a href="#architecture" className="hover:text-text transition-colors">Architecture</a>
-                        <a href="#security" className="hover:text-text transition-colors">Security</a>
-                        <a href="#demo" className="hover:text-text transition-colors">Demo</a>
-                        <a href="https://github.com" className="hover:text-text transition-colors flex items-center gap-2">
-                            <Github size={16} />
-                            GitHub
-                        </a>
+                        <a href="#features" className="hover:text-text transition-colors">Features</a>
+                        <a href="#cta" className="hover:text-text transition-colors">Get Started</a>
+                        <Link href="/dashboard" className="hover:text-text transition-colors">Dashboard</Link>
                     </nav>
 
                     {/* CTA */}
@@ -55,9 +47,9 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <section className="py-24 px-12">
-                <div className="max-w-[1440px] mx-auto">
-                    <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <section className="py-16 px-8 lg:px-12">
+                <div className="max-w-[1200px] mx-auto">
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
                         {/* Left - Hero Content */}
                         <div>
                             <motion.div
@@ -65,24 +57,24 @@ export default function LandingPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6 }}
                             >
-                                <h1 className="text-[40px] font-semibold leading-tight text-text mb-6">
+                                <h1 className="text-3xl lg:text-4xl font-semibold leading-tight text-text mb-4">
                                     AI That Actually<br />
                                     Understands Contracts.
                                 </h1>
-                                <p className="text-lg text-text-secondary mb-10 leading-relaxed">
-                                    Agentic, explainable, production-grade legal intelligence.
+                                <p className="text-base text-text-secondary mb-8 leading-relaxed max-w-lg">
+                                    Understand, assess, and negotiate contracts with AI that explains its reasoning.
                                 </p>
 
                                 {/* Metrics Bar */}
-                                <div className="grid grid-cols-3 gap-4 mb-10">
+                                <div className="grid grid-cols-3 gap-3 mb-8">
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.2 }}
                                         className="bg-bg-surface border border-divider rounded-lg p-4"
                                     >
-                                        <div className="text-2xl font-semibold text-success mb-1">96%</div>
-                                        <div className="text-xs text-text-secondary font-medium">Retrieval Accuracy</div>
+                                        <div className="text-2xl font-semibold text-success mb-1">Fast</div>
+                                        <div className="text-xs text-text-secondary font-medium">Clause Retrieval</div>
                                     </motion.div>
 
                                     <motion.div
@@ -101,8 +93,8 @@ export default function LandingPage() {
                                         transition={{ delay: 0.4 }}
                                         className="bg-bg-surface border border-divider rounded-lg p-4"
                                     >
-                                        <div className="text-2xl font-semibold text-primary mb-1">0</div>
-                                        <div className="text-xs text-text-secondary font-medium">Hallucinations</div>
+                                        <div className="text-2xl font-semibold text-primary mb-1">Cited</div>
+                                        <div className="text-xs text-text-secondary font-medium">Source References</div>
                                     </motion.div>
                                 </div>
 
@@ -180,14 +172,14 @@ export default function LandingPage() {
             </section>
 
             {/* Feature Highlights */}
-            <section className="py-20 px-12 bg-bg-subtle border-t border-divider">
-                <div className="max-w-[1440px] mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-[28px] font-semibold text-text mb-4">
-                            Production-Grade Legal Intelligence
+            <section id="features" className="py-16 px-8 lg:px-12 bg-bg-subtle border-t border-divider">
+                <div className="max-w-[1200px] mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl font-semibold text-text mb-3">
+                            How It Works
                         </h2>
                         <p className="text-text-secondary max-w-2xl mx-auto">
-                            Built for legal teams, compliance officers, and founders who need explainable AI
+                            Built for legal teams who need accurate, explainable contract analysis
                         </p>
                     </div>
 
@@ -205,7 +197,7 @@ export default function LandingPage() {
                             </div>
                             <h3 className="text-xl font-semibold text-text mb-3">Hybrid RAG</h3>
                             <p className="text-text-secondary text-sm leading-relaxed">
-                                Dense + BM25 + RRF retrieval ensures accurate clause matching with enterprise-grade precision
+                                Multi-method search ensures accurate clause matching with high precision
                             </p>
                         </motion.div>
 
@@ -220,9 +212,9 @@ export default function LandingPage() {
                             <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center mb-6">
                                 <Brain className="w-6 h-6 text-success" />
                             </div>
-                            <h3 className="text-xl font-semibold text-text mb-3">Agentic ReAct</h3>
+                            <h3 className="text-xl font-semibold text-text mb-3">Transparent Reasoning</h3>
                             <p className="text-text-secondary text-sm leading-relaxed">
-                                Transparent reasoning with visible thought → action → observation chains for explainability
+                                Clear step-by-step reasoning for every analysis, so you always know why a risk was flagged
                             </p>
                         </motion.div>
 
@@ -237,7 +229,7 @@ export default function LandingPage() {
                             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                                 <BarChart3 className="w-6 h-6 text-primary" />
                             </div>
-                            <h3 className="text-xl font-semibold text-text mb-3">GraphRAG Intelligence</h3>
+                            <h3 className="text-xl font-semibold text-text mb-3">Clause Mapping</h3>
                             <p className="text-text-secondary text-sm leading-relaxed">
                                 Clause relationship mapping reveals hidden dependencies and contract structure insights
                             </p>
@@ -247,14 +239,14 @@ export default function LandingPage() {
             </section>
 
             {/* CTA Section */}
-            <section className="py-24 px-12">
-                <div className="max-w-[1440px] mx-auto">
-                    <div className="bg-primary rounded-2xl p-16 text-center">
-                        <h2 className="text-[32px] font-semibold text-text-inverse mb-6">
-                            Ready for Production-Grade Legal AI?
+            <section id="cta" className="py-16 px-8 lg:px-12">
+                <div className="max-w-[1200px] mx-auto">
+                    <div className="bg-primary rounded-2xl p-8 lg:p-10 text-center">
+                        <h2 className="text-2xl font-semibold text-text-inverse mb-4">
+                            Start Analyzing Contracts Today
                         </h2>
-                        <p className="text-text-inverse/80 text-lg mb-8 max-w-2xl mx-auto">
-                            Join legal teams and compliance officers using DocuIntel for explainable contract analysis
+                        <p className="text-text-inverse/80 text-base mb-6 max-w-2xl mx-auto">
+                            Upload a contract and get risk analysis, redline suggestions, and negotiation scenarios in minutes.
                         </p>
                         <Link href="/dashboard">
                             <motion.button
@@ -262,7 +254,7 @@ export default function LandingPage() {
                                 whileTap={{ scale: 0.98 }}
                                 className="px-10 py-4 bg-accent text-primary rounded-lg font-semibold text-lg shadow-xl hover:bg-accent-light transition-colors"
                             >
-                                Request Enterprise Demo
+                                Get Started
                             </motion.button>
                         </Link>
                     </div>
@@ -270,8 +262,8 @@ export default function LandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="py-12 px-12 border-t border-divider">
-                <div className="max-w-[1440px] mx-auto flex justify-between items-center">
+            <footer className="py-8 px-8 lg:px-12 border-t border-divider">
+                <div className="max-w-[1200px] mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                             <Building2 className="w-4 h-4 text-text-inverse" />
@@ -280,10 +272,9 @@ export default function LandingPage() {
                     </div>
 
                     <div className="flex gap-8 text-sm text-text-secondary">
-                        <a href="#" className="hover:text-text transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-text transition-colors">Security</a>
-                        <a href="#" className="hover:text-text transition-colors">Terms</a>
-                        <a href="#" className="hover:text-text transition-colors">Contact</a>
+                        <Link href="/dashboard" className="hover:text-text transition-colors">Dashboard</Link>
+                        <Link href="/dashboard/cases" className="hover:text-text transition-colors">Cases</Link>
+                        <Link href="/dashboard/settings" className="hover:text-text transition-colors">Settings</Link>
                     </div>
 
                     <p className="text-sm text-text-dim">© 2026 DocuIntel. All rights reserved.</p>

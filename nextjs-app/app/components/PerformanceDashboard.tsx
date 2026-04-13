@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Zap, ShieldAlert, Cpu, Activity, BarChart, RefreshCw } from 'lucide-react';
+import { Target, Zap, ShieldAlert, Cpu, Activity, BarChart, RefreshCw, Terminal, Layers, Box, Hash, Database, Search } from 'lucide-react';
 
 export default function PerformanceDashboard() {
     const [loading, setLoading] = useState(true);
@@ -23,14 +23,15 @@ export default function PerformanceDashboard() {
 
     useEffect(() => {
         fetchMetrics();
-        const interval = setInterval(fetchMetrics, 30000); // Update every 30s
+        const interval = setInterval(fetchMetrics, 30000);
         return () => clearInterval(interval);
     }, []);
 
     if (loading && !metrics) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <RefreshCw className="animate-spin text-blue-500" size={32} />
+            <div className="flex flex-col items-center justify-center py-16 opacity-30">
+                <RefreshCw className="animate-spin text-white mb-3" size={24} />
+                <p className="text-xs text-white font-medium">Loading Metrics</p>
             </div>
         );
     }
@@ -38,137 +39,133 @@ export default function PerformanceDashboard() {
     const cards = [
         {
             title: 'Retrieval Accuracy',
-            value: metrics?.summary?.retrievalAccuracy || '92.4%',
-            desc: 'Semantic search precision across document corpus',
-            icon: Target,
-            color: 'text-green-400',
-            bg: 'bg-green-400/10'
+            value: metrics?.summary?.retrievalAccuracy || '—',
+            desc: 'Semantic search precision',
+            icon: Search,
+            color: 'text-primary'
         },
         {
-            title: 'Avg. Latency',
-            value: metrics?.summary?.avgLatency || '1,840ms',
-            desc: 'End-to-end processing time for RAG pipeline',
-            icon: Zap,
-            color: 'text-yellow-400',
-            bg: 'bg-yellow-400/10'
+            title: 'Avg Latency',
+            value: metrics?.summary?.avgLatency || '—',
+            desc: 'Per-clause analysis time',
+            icon: Activity,
+            color: 'text-purple-400'
         },
         {
-            title: 'Hallucination Rate',
-            value: metrics?.summary?.hallucinationRate || '3.2%',
-            desc: 'Verified grounded responses via Reviewer agent',
+            title: 'Success Rate',
+            value: metrics?.summary?.successRate || '—',
+            desc: 'API call success rate',
             icon: ShieldAlert,
-            color: 'text-red-400',
-            bg: 'bg-red-400/10'
+            color: 'text-emerald-400'
         },
         {
             title: 'Uptime',
-            value: metrics?.summary?.uptime || '99.9%',
-            desc: 'System availability across all AI providers',
-            icon: Activity,
-            color: 'text-blue-400',
-            bg: 'bg-blue-400/10'
+            value: metrics?.summary?.uptime || '—',
+            desc: 'Server availability',
+            icon: Database,
+            color: 'text-accent'
         }
     ];
 
     return (
-        <div className="p-6 space-y-8 h-full overflow-y-auto">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-white mb-1">Performance Intelligence</h2>
-                    <p className="text-gray-400 text-sm">Real-time diagnostics of the RAG engine and AI orchestration layer.</p>
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.05]">
+                <div className="flex items-center gap-3">
+                    <Terminal size={18} className="text-primary" />
+                    <h2 className="text-lg font-semibold text-white">Performance Analytics</h2>
                 </div>
                 <button
                     onClick={fetchMetrics}
-                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] hover:bg-white/[0.08] transition-all text-xs font-medium text-white"
                 >
-                    <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    {loading ? 'Refreshing' : 'Refresh'}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Metric Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {cards.map((card, i) => (
                     <motion.div
                         key={card.title}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="glass-card rounded-xl p-5 hover:bg-white/[0.02] transition-colors"
                     >
-                        <div className={`w-12 h-12 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
-                            <card.icon className={card.color} size={24} />
+                        <div className={`w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center mb-4 border border-white/[0.08]`}>
+                            <card.icon className={card.color} size={16} />
                         </div>
-                        <div className="text-2xl font-bold text-white mb-1">{card.value}</div>
-                        <div className="text-sm font-semibold text-gray-300 mb-2">{card.title}</div>
-                        <div className="text-xs text-gray-400 leading-relaxed">{card.desc}</div>
+                        <div className="text-2xl font-semibold text-white mb-1">{card.value}</div>
+                        <div className="text-xs font-medium text-text-dim mb-1">{card.title}</div>
+                        <p className="text-xs text-text-secondary opacity-60">{card.desc}</p>
                     </motion.div>
                 ))}
             </div>
 
+            {/* Detailed Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 p-6 rounded-2xl bg-white/5 border border-white/10">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <BarChart size={20} className="text-blue-400" />
-                        Retrieval Precision Over Time
-                    </h3>
-                    <div className="h-64 flex items-end gap-2 px-4">
-                        {[40, 65, 45, 92, 85, 94, 70, 88, 92, 95, 80, 92].map((val, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                <div
-                                    className="w-full bg-blue-500/40 hover:bg-blue-500/60 rounded-t-sm transition-all relative"
-                                    style={{ height: `${val}%` }}
-                                >
-                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                        {val}% Accuracy
-                                    </div>
-                                </div>
-                                <div className="text-[10px] text-gray-500">T-{12 - i}h</div>
+                <div className="lg:col-span-2 glass-card rounded-xl p-6 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-sm font-semibold text-white">Metrics Overview</h3>
+                    </div>
+
+                    {metrics?.report ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                <p className="text-xs text-text-dim mb-1">Retrieval Accuracy</p>
+                                <p className="text-xl font-semibold text-white">{metrics.report.retrievalAccuracy?.average?.toFixed(1) ?? '—'}%</p>
+                                <p className="text-[10px] text-text-dim mt-1">{metrics.report.retrievalAccuracy?.count ?? 0} samples</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                <p className="text-xs text-text-dim mb-1">Avg Response Latency</p>
+                                <p className="text-xl font-semibold text-white">{metrics.report.responseLatency?.average?.toFixed(0) ?? '—'}ms</p>
+                                <p className="text-[10px] text-text-dim mt-1">min {metrics.report.responseLatency?.min?.toFixed(0) ?? '—'}ms / max {metrics.report.responseLatency?.max?.toFixed(0) ?? '—'}ms</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                <p className="text-xs text-text-dim mb-1">Success Rate</p>
+                                <p className="text-xl font-semibold text-success">{metrics.report.successRate?.average?.toFixed(1) ?? '—'}%</p>
+                                <p className="text-[10px] text-text-dim mt-1">{metrics.report.successRate?.count ?? 0} requests</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                                <p className="text-xs text-text-dim mb-1">Hallucination Rate</p>
+                                <p className="text-xl font-semibold text-white">{metrics.report.hallucinationRate?.average?.toFixed(1) ?? '—'}%</p>
+                                <p className="text-[10px] text-text-dim mt-1">{metrics.report.hallucinationRate?.count ?? 0} checks</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-text-dim text-sm py-8">
+                            Run an analysis to collect performance data.
+                        </div>
+                    )}
+                </div>
+
+                <div className="glass-card rounded-xl p-6 space-y-6">
+                    <h3 className="text-sm font-semibold text-white">System Info</h3>
+
+                    <div className="space-y-4">
+                        {[
+                            { label: 'Model', value: metrics?.report?.version || 'gpt-4o-mini' },
+                            { label: 'Requests Tracked', value: String(metrics?.report?.successRate?.count ?? 0) },
+                            { label: 'Avg Latency', value: `${metrics?.report?.responseLatency?.average?.toFixed(0) ?? '—'}ms` },
+                            { label: 'Min Latency', value: `${metrics?.report?.responseLatency?.min?.toFixed(0) ?? '—'}ms` },
+                            { label: 'Max Latency', value: `${metrics?.report?.responseLatency?.max?.toFixed(0) ?? '—'}ms` },
+                        ].map(item => (
+                            <div key={item.label} className="flex justify-between text-xs py-2 border-b border-white/[0.04] last:border-0">
+                                <span className="text-text-dim">{item.label}</span>
+                                <span className="text-white font-mono">{item.value}</span>
                             </div>
                         ))}
                     </div>
-                </div>
 
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-6">
-                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                        <Cpu size={20} className="text-purple-400" />
-                        Resource Allocation
-                    </h3>
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between text-xs mb-1.5">
-                                <span className="text-gray-400">Embedding Token Usage</span>
-                                <span className="text-white">82%</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500" style={{ width: '82%' }} />
-                            </div>
+                    <div className="pt-4 border-t border-white/[0.05] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Box size={12} className="text-text-dim" />
+                            <span className="text-xs text-text-dim">Status</span>
                         </div>
-                        <div>
-                            <div className="flex justify-between text-xs mb-1.5">
-                                <span className="text-gray-400">Vector Search Latency</span>
-                                <span className="text-white">12ms</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500" style={{ width: '15%' }} />
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-xs mb-1.5">
-                                <span className="text-gray-400">LLM Generation Time</span>
-                                <span className="text-white">1.7s</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-yellow-500" style={{ width: '65%' }} />
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-xs mb-1.5">
-                                <span className="text-gray-400">Cache Hit Rate</span>
-                                <span className="text-white">24%</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-500" style={{ width: '24%' }} />
-                            </div>
-                        </div>
+                        <span className="text-xs font-mono text-success font-medium">Running</span>
                     </div>
                 </div>
             </div>

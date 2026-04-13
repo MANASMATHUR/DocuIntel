@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, Filter, FileText, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, Filter, FileText, ChevronDown, ChevronUp, Terminal, BookOpen, Layers } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Clause {
   clause_id: string
@@ -16,13 +17,21 @@ interface ClauseViewerProps {
 
 export default function ClauseViewer({ clauses }: ClauseViewerProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedClauses, setExpandedClauses] = useState<Set<string>>(new Set())
-  const [filterSeverity, setFilterSeverity] = useState<string>('all')
+  const [expandedClauses, setExpandedClauses] = useState<Set<string>>(() => {
+    // Safely initialize with first clause ID, or empty set if no clauses
+    if (clauses && clauses.length > 0 && clauses[0]?.clause_id) {
+      return new Set([clauses[0].clause_id])
+    }
+    return new Set()
+  })
 
   const filteredClauses = useMemo(() => {
+    if (!clauses || !Array.isArray(clauses)) {
+      return []
+    }
     return clauses.filter(clause => {
-      const matchesSearch = clause.heading.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           clause.body.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSearch = clause.heading?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        clause.body?.toLowerCase().includes(searchQuery.toLowerCase())
       return matchesSearch
     })
   }, [clauses, searchQuery])
@@ -40,75 +49,94 @@ export default function ClauseViewer({ clauses }: ClauseViewerProps) {
   }
 
   return (
-    <div className="clause-viewer">
-      <div className="viewer-header">
-        <h2 className="viewer-title">Clause Viewer</h2>
-        <div className="viewer-controls">
-          <div className="search-box">
-            <Search size={20} />
-            <input
-              type="text"
-              placeholder="Search clauses..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-white/[0.05]">
+        <div className="flex items-center gap-3">
+          <BookOpen size={18} className="text-primary" />
+          <div>
+            <h2 className="text-lg font-semibold text-white">Clause Repository</h2>
+            <p className="text-xs text-text-dim">{clauses?.length || 0} clauses found</p>
           </div>
-          <div className="filter-box">
-            <Filter size={20} />
-            <select
-              value={filterSeverity}
-              onChange={(e) => setFilterSeverity(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Clauses</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+        </div>
+
+        <div className="relative w-full md:w-72">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">
+            <Search size={14} />
           </div>
+          <input
+            type="text"
+            placeholder="Search clauses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
+          />
         </div>
       </div>
 
-      <div className="clause-stats">
-        <span className="stat-badge">Total: {clauses.length}</span>
-        <span className="stat-badge">Filtered: {filteredClauses.length}</span>
-      </div>
-
-      <div className="clause-list">
+      <div className="space-y-3">
         {filteredClauses.map((clause, index) => {
           const isExpanded = expandedClauses.has(clause.clause_id)
           return (
-            <div key={clause.clause_id} className="clause-card">
-              <div className="clause-header" onClick={() => toggleClause(clause.clause_id)}>
-                <div className="clause-info">
-                  <span className="clause-number">#{index + 1}</span>
-                  <h3 className="clause-title">{clause.heading || 'Untitled Clause'}</h3>
+            <motion.div
+              key={clause.clause_id}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              className={`glass-card rounded-xl overflow-hidden transition-all ${isExpanded ? 'border-primary/20' : 'border-white/[0.06]'}`}
+            >
+              <div
+                className="px-5 py-3.5 cursor-pointer flex justify-between items-center group hover:bg-white/[0.02] transition-colors"
+                onClick={() => toggleClause(clause.clause_id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white/5 text-text-dim'}`}>
+                    <Terminal size={14} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono text-primary">Clause {index + 1}</span>
+                    <h3 className="text-sm font-medium text-white group-hover:text-primary transition-colors">
+                      {clause.heading || 'Untitled Clause'}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
                   {clause.source_document && (
-                    <span className="clause-source">{clause.source_document}</span>
+                    <span className="hidden lg:inline text-xs text-text-dim">{clause.source_document}</span>
                   )}
+                  <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-primary' : 'text-text-dim'}`}>
+                    <ChevronDown size={16} />
+                  </div>
                 </div>
-                <button className="expand-btn">
-                  {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
               </div>
-              {isExpanded && (
-                <div className="clause-body">
-                  <p className="clause-text">{clause.body}</p>
-                </div>
-              )}
-            </div>
+
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 py-4 border-t border-white/[0.05] bg-white/[0.01]">
+                      <p className="text-sm text-text-secondary leading-relaxed font-mono">
+                        {clause.body || "No clause content available."}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           )
         })}
         {filteredClauses.length === 0 && (
-          <div className="empty-clauses">
-            <FileText size={48} />
-            <p>No clauses found</p>
+          <div className="py-12 flex flex-col items-center text-center text-text-dim">
+            <Search size={24} className="mb-3 opacity-40" />
+            <p className="text-sm font-medium">No Results Found</p>
+            <p className="text-xs">Try different search terms.</p>
           </div>
         )}
       </div>
     </div>
   )
 }
-
