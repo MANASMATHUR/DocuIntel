@@ -8,11 +8,6 @@ const nextConfig = {
     },
     serverComponentsExternalPackages: ['pdf-parse'],
   },
-  webpack: (config) => {
-    // pdf-parse and pdfjs-dist optional deps
-    config.resolve.alias.canvas = false;
-    return config;
-  },
 }
 
 module.exports = nextConfig

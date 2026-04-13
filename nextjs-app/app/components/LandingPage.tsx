@@ -158,11 +158,11 @@ export default function LandingPage() {
 
                                 {/* Citations */}
                                 <div className="pt-4 border-t border-divider">
-                                    <div className="text-xs font-medium text-text-dim mb-2">CITATIONS</div>
+                                    <div className="text-xs font-medium text-text-dim mb-2">Citations</div>
                                     <div className="flex flex-wrap gap-2">
-                                        <span className="px-2 py-1 bg-bg-subtle text-text-secondary text-xs rounded font-mono">§8.2</span>
-                                        <span className="px-2 py-1 bg-bg-subtle text-text-secondary text-xs rounded font-mono">§5.1</span>
-                                        <span className="px-2 py-1 bg-bg-subtle text-text-secondary text-xs rounded font-mono">§3.4</span>
+                                        <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-md">Section 8.2</span>
+                                        <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-md">Section 5.1</span>
+                                        <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-md">Section 3.4</span>
                                     </div>
                                 </div>
                             </div>
