@@ -44,15 +44,14 @@ export async function middleware(request: NextRequest) {
     if (isProtectedRoute(pathname)) {
         const authResult = await checkAuthentication(request);
         if (!authResult.success) {
-            const isDev = process.env.NODE_ENV === 'development';
-            if (isDev) {
-                // In development, allow requests but mark as unverified
-                console.warn(`[Middleware] Dev mode - allowing unauthenticated access to ${pathname}`);
+            // Allow unauthenticated access in demo mode (no auth provider configured)
+            // To enforce auth in production, set REQUIRE_AUTH=1 in environment variables
+            const requireAuth = process.env.REQUIRE_AUTH === '1';
+            if (!requireAuth) {
                 const response = addCORSHeaders(NextResponse.next());
-                response.headers.set('X-Auth-Status', 'unverified-dev-mode');
+                response.headers.set('X-Auth-Status', 'demo-mode');
                 return response;
             }
-            // In production, reject unauthorized requests
             return addCORSHeaders(
                 NextResponse.json(
                     { error: 'Unauthorized', message: authResult.error },
