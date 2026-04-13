@@ -18,12 +18,14 @@ from agent.router import ModelRouter, RouterResult
 from mcp_tools import (
     clause_rag,
     clause_segmenter,
+    clause_graph,
     comparator,
     document_reader,
     redline_generator,
     report_builder,
     risk_classifier,
 )
+from services.semantic_cache import SemanticCache
 
 
 @dataclass
@@ -71,6 +73,9 @@ class AgentCore:
         self.policies = policies
         self.enable_clause_embeddings = enable_clause_embeddings
         self.logs: List[AuditLogEntry] = []
+        
+        # Initialize Services
+        self.cache = SemanticCache() if getattr(self.policies, "use_semantic_cache", False) else None
 
     # --------------------------------------------------------------------- #
     # Planning
@@ -135,12 +140,17 @@ class AgentCore:
         ]
 
     # --------------------------------------------------------------------- #
-    # Worker Execution
+    # Worker Execution (ReAct Loop)
     # --------------------------------------------------------------------- #
     def execute(self, tasks: List[AgentTask], artifacts: Dict) -> Dict:
         """
-        Execute each planned task using the MCP tool layer with retries + audits.
+        Execute each planned task using the MCP tool layer.
+        Supports both linear execution and dynamic ReAct loops.
         """
+        if getattr(self.policies, "use_react", False):
+            return self.run_react_loop(artifacts)
+
+        # Legacy Linear Execution
         for task in tasks:
             retries = 0
             while retries <= self.policies.max_retries:
@@ -165,6 +175,76 @@ class AgentCore:
                         if self.policies.stop_on_failure:
                             raise
         artifacts["tasks"] = [task.__dict__ for task in tasks]
+        return artifacts
+
+    def run_react_loop(self, artifacts: Dict, max_steps: int = 8) -> Dict:
+        """
+        Dynamic Thought → Action → Observation loop.
+        """
+        history = []
+        case_id = artifacts["case"].get("case_id", "default")
+        
+        for step_idx in range(max_steps):
+            prompt = (
+                "You are the ReAct Agent for AutoLawyer-MCP. "
+                "Current state and history are provided below. "
+                "Decide on the next tool to call or finish if objectives are met.\n"
+                "Available tools: document_reader, clause_segmenter, clause_rag, "
+                "risk_classifier, redline_generator, comparator, report_builder, clause_graph.\n\n"
+                f"History:\n{json.dumps(history, indent=2)}\n"
+                f"Case Context:\n{json.dumps(artifacts['case'], indent=2)}\n"
+                f"Clause Graph Summary:\n{json.dumps(artifacts.get('clause_graph', {}), indent=2)}\n"
+                "Respond with JSON: {\"thought\": \"your reasoning\", \"action\": \"tool_name\", \"payload\": {}} "
+                "or {\"thought\": \"final summary\", \"action\": \"finish\", \"payload\": {}}"
+            )
+            
+            res: RouterResult = self.router.generate(
+                task_type="react_step",
+                prompt=prompt
+            )
+            
+            try:
+                decision = json.loads(res.output)
+            except json.JSONDecodeError:
+                # Handle corrupted LLM output
+                history.append({"step": step_idx, "error": "Invalid JSON response from LLM"})
+                continue
+
+            thought = decision.get("thought", "No thought provided.")
+            action = decision.get("action", "finish")
+            payload = decision.get("payload", {})
+
+            self._log(
+                task=f"ReAct Step {step_idx}",
+                role="react_worker",
+                model=f"{res.provider}:{res.model}",
+                prompt=thought,
+                result_preview=json.dumps(decision)[:500],
+            )
+
+            if action == "finish":
+                artifacts["react_summary"] = thought
+                break
+
+            # Execute Tool
+            try:
+                task = AgentTask(name=f"react-{step_idx}-{action}", tool=action, payload=payload)
+                result = self._dispatch_task(task, artifacts)
+                history.append({
+                    "step": step_idx,
+                    "thought": thought,
+                    "action": action,
+                    "observation": result
+                })
+            except Exception as exc:
+                history.append({
+                    "step": step_idx,
+                    "thought": thought,
+                    "action": action,
+                    "error": str(exc)
+                })
+
+        artifacts["react_history"] = history
         return artifacts
 
     def _dispatch_task(self, task: AgentTask, artifacts: Dict) -> Dict:
@@ -217,6 +297,11 @@ class AgentCore:
                 secondary=prepared_comparisons,
             )
             artifacts["comparisons"] = result
+        elif tool_name == "clause_graph":
+            result = clause_graph.build_clause_graph(
+                artifacts.get("clauses", [])
+            )
+            artifacts["clause_graph"] = result
         elif tool_name == "report_builder":
             result = report_builder.build_report(
                 risks=artifacts.get("risks", []),
@@ -275,11 +360,33 @@ class AgentCore:
     def run_case(self, case_context: Dict) -> Dict:
         """
         Convenience helper that runs plan → execute → review with guardrails.
+        Includes Semantic Caching to bypass execution for identical cases.
         """
+        case_signature = json.dumps(case_context, sort_keys=True)
+        
+        # 1. Check Cache
+        if self.cache:
+            cached_result = self.cache.get(case_signature)
+            if cached_result:
+                self._log(
+                    task="Semantic Cache",
+                    role="system",
+                    model="internal",
+                    prompt="Checking for cached results...",
+                    result_preview="CACHE_HIT: Returning stored analysis."
+                )
+                return json.loads(cached_result)
+
+        # 2. Normal Execution
         tasks = self.build_plan(case_context)
         artifacts = self.execute(tasks, artifacts={"case": case_context})
         outcome = self.review(artifacts)
         outcome["logs"] = [log.__dict__ for log in self.logs]
+        
+        # 3. Save to Cache
+        if self.cache:
+            self.cache.set(case_signature, json.dumps(outcome))
+            
         return outcome
 
     def _log(self, task: str, role: str, model: str, prompt: str, result_preview: str):

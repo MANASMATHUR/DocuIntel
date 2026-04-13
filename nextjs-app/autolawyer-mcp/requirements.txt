@@ -2,3 +2,7 @@ pypdf
 python-docx
 chromadb
 sentence-transformers
+fastapi
+uvicorn
+python-multipart
+openai

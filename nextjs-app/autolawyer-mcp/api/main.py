@@ -22,6 +22,12 @@ from agent.core import AgentCore
 from agent.policies import ExecutionPolicies
 from agent.router import ModelRouter
 
+try:
+    from storage.mongodb import MongoDBStorage
+    _db = MongoDBStorage()
+except Exception:
+    _db = None
+
 app = FastAPI(title="AutoLawyer-MCP API", version="1.0.0")
 
 # CORS for React frontend
@@ -69,6 +75,12 @@ async def health():
         "providers_available": len(router.providers),
         "offline_mode": router.offline_mode,
     }
+
+
+@app.get("/api/health")
+async def api_health():
+    """Compatibility alias used by the Next.js GPU beta path."""
+    return await health()
 
 
 @app.post("/api/cases", response_model=CaseResponse)
@@ -128,6 +140,13 @@ async def create_case(
             result = agent.run_case(case_context)
             cases[case_id] = result
 
+            # Persist to MongoDB if available
+            if _db:
+                try:
+                    _db.save_case(case_id, result)
+                except Exception as db_err:
+                    print(f"[MongoDB] Failed to persist case {case_id}: {db_err}")
+
             return CaseResponse(
                 case_id=case_id,
                 status="completed",
@@ -146,7 +165,15 @@ async def create_case(
 async def get_case(case_id: str):
     """Retrieve case results."""
     if case_id not in cases:
-        raise HTTPException(status_code=404, detail="Case not found")
+        # Try MongoDB fallback
+        if _db:
+            db_case = _db.get_case(case_id)
+            if db_case:
+                cases[case_id] = db_case
+            else:
+                raise HTTPException(status_code=404, detail="Case not found")
+        else:
+            raise HTTPException(status_code=404, detail="Case not found")
     case = cases[case_id]
     return CaseResponse(
         case_id=case_id,

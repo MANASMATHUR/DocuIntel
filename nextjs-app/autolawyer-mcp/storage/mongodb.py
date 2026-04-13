@@ -38,18 +38,26 @@ class MongoDBStorage:
 
     def save_case(self, case_id: str, case_data: Dict) -> bool:
         """Persist case results to MongoDB."""
-        if not self.db:
-            self.connect()
-        collection = self.db.cases
-        case_data["_id"] = case_id
-        collection.replace_one({"_id": case_id}, case_data, upsert=True)
-        return True
+        try:
+            if not self.db:
+                self.connect()
+            collection = self.db.cases
+            case_data["_id"] = case_id
+            collection.replace_one({"_id": case_id}, case_data, upsert=True)
+            return True
+        except Exception as exc:
+            print(f"[MongoDB] Failed to save case {case_id}: {exc}")
+            return False
 
     def get_case(self, case_id: str) -> Optional[Dict]:
         """Retrieve case by ID."""
-        if not self.db:
-            self.connect()
-        return self.db.cases.find_one({"_id": case_id})
+        try:
+            if not self.db:
+                self.connect()
+            return self.db.cases.find_one({"_id": case_id})
+        except Exception as exc:
+            print(f"[MongoDB] Failed to get case {case_id}: {exc}")
+            return None
 
     def list_cases(self, limit: int = 50) -> List[Dict]:
         """List recent cases."""

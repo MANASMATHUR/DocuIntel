@@ -201,7 +201,10 @@ class ModelRouter:
             max_tokens=max_tokens,
         )
         latency_ms = (time.time() - start) * 1000
-        output_text = response["choices"][0]["message"]["content"].strip()
+        try:
+            output_text = response["choices"][0]["message"]["content"].strip()
+        except (KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError(f"Unexpected response structure from {provider.name}: {exc}") from exc
         tokens = response.get("usage", {}).get("total_tokens", len(output_text.split()))
         provider.tokens_used += tokens
         self.tokens_used += tokens

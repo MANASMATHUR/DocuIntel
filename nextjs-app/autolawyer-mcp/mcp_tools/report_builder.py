@@ -32,9 +32,11 @@ def _build_summary(risks, redlines, comparisons) -> ExecutiveSummary:
     counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     top_issues: List[str] = []
     for risk in risks:
-        counts[risk["severity"]] = counts.get(risk["severity"], 0) + 1
-        if risk["severity"] in {"critical", "high"}:
-            top_issues.append(f"{risk['heading']} → {risk['severity']} risk")
+        severity = risk.get("severity", "low")
+        counts[severity] = counts.get(severity, 0) + 1
+        if severity in {"critical", "high"}:
+            heading = risk.get("heading", "Unknown clause")
+            top_issues.append(f"{heading} → {severity} risk")
 
     remediation = [
         "Finalize redline patches and export DOCX/PDF for counsel sign-off.",
@@ -57,17 +59,22 @@ def _build_summary(risks, redlines, comparisons) -> ExecutiveSummary:
 
 
 def _build_action_plan(tasks: Iterable[Dict], risks: Iterable[Dict]) -> List[Dict]:
+    risks_list = list(risks)
     activity = []
     for task in tasks:
+        if task.get("status") == "failed":
+            notes = task.get("error", "Unknown error")
+        else:
+            notes = task.get("error") or task.get("result", {})
         activity.append(
             {
-                "name": task["name"],
-                "status": task["status"],
-                "tool": task["tool"],
-                "notes": task.get("error") or task.get("result", {}) if task.get("status") != "failed" else task.get("error"),
+                "name": task.get("name", "unnamed"),
+                "status": task.get("status", "unknown"),
+                "tool": task.get("tool", "unknown"),
+                "notes": notes,
             }
         )
-    activity.append({"name": "Risk coverage", "status": "info", "tool": "risk_classifier", "notes": f"{len(list(risks))} clauses scored"})
+    activity.append({"name": "Risk coverage", "status": "info", "tool": "risk_classifier", "notes": f"{len(risks_list)} clauses scored"})
     return activity
 
 
