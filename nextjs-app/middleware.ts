@@ -1,157 +1,90 @@
-/**
- * Next.js Middleware for DocuIntel
- * 
- * Handles authentication, CORS, and request logging for API routes.
- * Protected routes require valid JWT tokens.
- */
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const JWT_SECRET = new TextEncoder().encode(
+    process.env.JWT_SECRET || 'docuintel-dev-secret-change-in-prod'
+);
+
+const COOKIE_NAME = 'docuintel-token';
 
 // Routes that require authentication
-const PROTECTED_ROUTES = [
-    '/api/cases',
-    '/api/ai/stream',
-    '/api/settings',
-];
+const PROTECTED_ROUTES = ['/api/cases', '/api/ai/stream', '/api/settings', '/api/negotiate', '/api/reports', '/api/metrics', '/api/search', '/api/library', '/api/integrations', '/api/billing'];
 
 // Routes that are always public
-const PUBLIC_ROUTES = [
-    '/api/health',
-    '/api/providers',
-    '/api/auth/login',
-    '/api/auth/register',
-    '/api/auth/demo-token',
-];
+const PUBLIC_ROUTES = ['/api/health', '/api/providers', '/api/auth/'];
 
-/**
- * Middleware function to handle authentication and CORS
- */
+// Pages that require login (redirect to /login if not authenticated)
+const PROTECTED_PAGES = ['/dashboard'];
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Handle CORS preflight requests
+    // CORS preflight
     if (request.method === 'OPTIONS') {
-        return handleCORS(request);
+        return new NextResponse(null, { status: 204, headers: getCORSHeaders() });
     }
 
-    // Skip authentication for public routes
-    if (isPublicRoute(pathname)) {
-        return addCORSHeaders(NextResponse.next());
+    // Public API routes: always allow
+    if (PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
+        return addCORS(NextResponse.next());
     }
 
-    // Check if route requires authentication
-    if (isProtectedRoute(pathname)) {
-        const authResult = await checkAuthentication(request);
-        if (!authResult.success) {
-            // Allow unauthenticated access in demo mode (no auth provider configured)
-            // To enforce auth in production, set REQUIRE_AUTH=1 in environment variables
-            const requireAuth = process.env.REQUIRE_AUTH === '1';
-            if (!requireAuth) {
-                const response = addCORSHeaders(NextResponse.next());
-                response.headers.set('X-Auth-Status', 'demo-mode');
-                return response;
-            }
-            return addCORSHeaders(
-                NextResponse.json(
-                    { error: 'Unauthorized', message: authResult.error },
-                    { status: 401 }
-                )
-            );
+    // Get user from cookie
+    const token = request.cookies.get(COOKIE_NAME)?.value;
+    let user = null;
+
+    if (token) {
+        try {
+            const { payload } = await jwtVerify(token, JWT_SECRET);
+            user = payload;
+        } catch {
+            // Token invalid/expired — clear it
         }
     }
 
-    // Log request for monitoring
-    logRequest(request);
-
-    return addCORSHeaders(NextResponse.next());
-}
-
-/**
- * Checks if a route is protected
- */
-function isProtectedRoute(pathname: string): boolean {
-    return PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-}
-
-/**
- * Checks if a route is public
- */
-function isPublicRoute(pathname: string): boolean {
-    return PUBLIC_ROUTES.some(route => pathname.startsWith(route));
-}
-
-/**
- * Validates authentication token
- */
-async function checkAuthentication(request: NextRequest): Promise<{ success: boolean; error?: string }> {
-    const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader) {
-        return { success: false, error: 'No authorization header provided' };
+    // Protected pages: redirect to login if not authenticated
+    if (PROTECTED_PAGES.some(r => pathname.startsWith(r))) {
+        if (!user) {
+            const loginUrl = new URL('/login', request.url);
+            loginUrl.searchParams.set('from', pathname);
+            return NextResponse.redirect(loginUrl);
+        }
+        return NextResponse.next();
     }
 
-    if (!authHeader.startsWith('Bearer ')) {
-        return { success: false, error: 'Invalid authorization format. Use Bearer token.' };
+    // Protected API routes: return 401 if not authenticated
+    if (PROTECTED_ROUTES.some(r => pathname.startsWith(r))) {
+        if (!user) {
+            return addCORS(
+                NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+            );
+        }
+        // Attach user info to request headers for downstream routes
+        const response = addCORS(NextResponse.next());
+        response.headers.set('X-User-Id', user.userId as string);
+        response.headers.set('X-User-Email', user.email as string);
+        response.headers.set('X-User-Name', user.name as string);
+        return response;
     }
 
-    const token = authHeader.substring(7);
-
-    // Dynamic import to use the updated auth module
-    const { validateToken } = await import('./lib/auth');
-    return await validateToken(token);
+    return addCORS(NextResponse.next());
 }
 
-/**
- * Handles CORS preflight requests
- */
-function handleCORS(request: NextRequest): NextResponse {
-    return new NextResponse(null, {
-        status: 204,
-        headers: getCORSHeaders(),
-    });
-}
-
-/**
- * Gets CORS headers
- */
 function getCORSHeaders(): HeadersInit {
     return {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-ID',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400',
     };
 }
 
-/**
- * Adds CORS headers to response
- */
-function addCORSHeaders(response: NextResponse): NextResponse {
-    const headers = getCORSHeaders();
-    Object.entries(headers).forEach(([key, value]) => {
-        response.headers.set(key, value);
-    });
+function addCORS(response: NextResponse): NextResponse {
+    Object.entries(getCORSHeaders()).forEach(([k, v]) => response.headers.set(k, v));
     return response;
 }
 
-/**
- * Logs request for monitoring
- */
-function logRequest(request: NextRequest): void {
-    const timestamp = new Date().toISOString();
-    const method = request.method;
-    const pathname = request.nextUrl.pathname;
-    const userAgent = request.headers.get('User-Agent') || 'Unknown';
-
-    console.log(`[${timestamp}] ${method} ${pathname} - ${userAgent.substring(0, 50)}`);
-}
-
-/**
- * Configure which routes this middleware applies to
- */
 export const config = {
-    matcher: [
-        '/api/:path*',
-    ],
+    matcher: ['/api/:path*', '/dashboard/:path*'],
 };

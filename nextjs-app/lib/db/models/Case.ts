@@ -6,6 +6,15 @@ const CaseSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    user_id: {
+        type: String,
+        required: true,
+        index: true,
+    },
+    starred: {
+        type: Boolean,
+        default: false,
+    },
     title: {
         type: String,
         default: 'Untitled Case',
