@@ -2,84 +2,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Settings from '@/lib/db/models/Settings';
 
+const DEFAULT_SETTINGS = {
+    notifications: { email: true, push: false, marketing: false },
+    appearance: { theme: 'Dark', compactMode: false },
+};
+
 export async function GET(request: NextRequest) {
+    const userId = request.headers.get('X-User-Id') || 'anonymous';
+    const userName = request.headers.get('X-User-Name') || '';
+    const userEmail = request.headers.get('X-User-Email') || '';
+
     try {
-        try {
-            await dbConnect();
-        } catch (dbError: any) {
-            console.warn('MongoDB connection failed, returning default settings:', dbError.message);
-            // Return default settings if DB is unavailable
-            return NextResponse.json({
-                userId: 'demo-user',
-                profile: {
-                    fullName: 'Demo User',
-                    email: 'demo@autolawyer.com',
-                },
-                notifications: {
-                    email: true,
-                    push: false,
-                    marketing: false,
-                },
-                appearance: {
-                    theme: 'Dark',
-                    compactMode: false,
-                },
-            });
-        }
-        let settings = await Settings.findOne({ userId: 'demo-user' });
+        await dbConnect();
+        let settings = await Settings.findOne({ userId });
 
         if (!settings) {
-            // Create default settings
             settings = await Settings.create({
-                userId: 'demo-user',
-                profile: {
-                    fullName: 'Demo User',
-                    email: 'demo@autolawyer.com',
-                },
-                notifications: {
-                    email: true,
-                    push: false,
-                    marketing: false,
-                },
-                appearance: {
-                    theme: 'Dark',
-                    compactMode: false,
-                },
+                userId,
+                profile: { fullName: userName, email: userEmail },
+                ...DEFAULT_SETTINGS,
             });
         }
 
-        // Convert to plain object and return only the needed fields
-        const settingsObj = settings.toObject();
+        const obj = settings.toObject();
         return NextResponse.json({
-            profile: settingsObj.profile || {},
-            notifications: settingsObj.notifications || {},
-            appearance: settingsObj.appearance || {},
+            profile: obj.profile || {},
+            notifications: obj.notifications || {},
+            appearance: obj.appearance || {},
         });
-    } catch (error) {
-        console.error('Settings fetch error:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch settings' },
-            { status: 500 }
-        );
+    } catch (error: any) {
+        return NextResponse.json({
+            profile: { fullName: userName, email: userEmail },
+            ...DEFAULT_SETTINGS,
+        });
     }
 }
 
 export async function POST(request: NextRequest) {
+    const userId = request.headers.get('X-User-Id') || 'anonymous';
+
     try {
-        try {
-            await dbConnect();
-        } catch (dbError: any) {
-            console.warn('MongoDB connection failed:', dbError.message);
-            return NextResponse.json(
-                { error: 'Database connection unavailable. Settings cannot be saved.' },
-                { status: 503 }
-            );
-        }
+        await dbConnect();
         const body = await request.json();
 
         const settings = await Settings.findOneAndUpdate(
-            { userId: 'demo-user' },
-            { 
+            { userId },
+            {
                 $set: {
                     profile: body.profile,
                     notifications: body.notifications,
@@ -89,18 +57,13 @@ export async function POST(request: NextRequest) {
             { new: true, upsert: true }
         );
 
-        // Convert to plain object and return only the needed fields
-        const settingsObj = settings.toObject();
+        const obj = settings.toObject();
         return NextResponse.json({
-            profile: settingsObj.profile || {},
-            notifications: settingsObj.notifications || {},
-            appearance: settingsObj.appearance || {},
+            profile: obj.profile || {},
+            notifications: obj.notifications || {},
+            appearance: obj.appearance || {},
         });
-    } catch (error) {
-        console.error('Settings update error:', error);
-        return NextResponse.json(
-            { error: 'Failed to update settings' },
-            { status: 500 }
-        );
+    } catch (error: any) {
+        return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
     }
 }

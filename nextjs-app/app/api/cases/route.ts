@@ -14,12 +14,24 @@ const inMemoryStore: Map<string, any> = (global as any).__caseStore ?? new Map()
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = request.headers.get('X-User-Id') || 'anonymous';
+
     try {
       await dbConnect();
     } catch (dbError: any) {
       console.warn('MongoDB connection failed, continuing without persistence:', dbError.message);
-      // Continue without DB - results will still be returned to user
     }
+
+    // Check plan limits
+    try {
+      const { checkAnalysisLimit, incrementAnalysisCount } = await import('@/lib/plan-check');
+      const limitCheck = await checkAnalysisLimit(userId);
+      if (!limitCheck.allowed) {
+        return NextResponse.json({ error: limitCheck.reason, upgrade: true }, { status: 403 });
+      }
+      await incrementAnalysisCount(userId);
+    } catch { /* plan check is best-effort */ }
+
     const formData = await request.formData()
     const primaryDocs = formData.getAll('primary_docs') as File[]
     const instructions = formData.get('instructions') as string || 'Standard commercial terms'
@@ -151,6 +163,7 @@ export async function POST(request: NextRequest) {
     try {
       const created = await Case.create({
         case_id: caseId,
+        user_id: userId,
         title: doc.name,
         type: 'Contract',
         status: 'completed',
@@ -174,6 +187,7 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to save to MongoDB, using in-memory store:', dbError.message);
       savedCase = {
         case_id: caseId,
+        user_id: userId,
         title: doc.name,
         type: 'Contract',
         status: 'completed',
@@ -191,6 +205,36 @@ export async function POST(request: NextRequest) {
       inMemoryStore.set(caseId, savedCase);
     }
 
+    // Update user stats
+    try {
+      const User = (await import('@/lib/db/models/User')).default;
+      const clauseCount = finalClauses?.length || 0;
+      const criticalCount = finalSummary?.critical || 0;
+      await User.findByIdAndUpdate(userId, {
+        $inc: {
+          'stats.casesAnalyzed': 1,
+          'stats.clausesReviewed': clauseCount,
+          'stats.criticalRisksFound': criticalCount,
+        }
+      });
+    } catch { /* stats update is best-effort */ }
+
+    // Fire notifications (non-blocking)
+    try {
+      const { notifyAnalysisComplete } = await import('@/lib/notifications');
+      const userName = request.headers.get('X-User-Name') || 'User';
+      notifyAnalysisComplete({
+        type: 'analysis_complete',
+        caseId,
+        title: doc.name,
+        clauseCount: finalClauses?.length || 0,
+        criticalCount: finalSummary?.critical || 0,
+        highCount: finalSummary?.high || 0,
+        userId,
+        userName,
+      }); // intentionally not awaited
+    } catch { /* notifications are best-effort */ }
+
     return NextResponse.json(savedCase)
   } catch (error: any) {
     console.error('Case creation error:', error)
@@ -202,10 +246,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const userId = request.headers.get('X-User-Id') || 'anonymous';
   const { searchParams } = new URL(request.url)
   const caseId = searchParams.get('case_id')
 
-  // Try MongoDB first
   let dbAvailable = false;
   try {
     await dbConnect();
@@ -216,19 +260,18 @@ export async function GET(request: NextRequest) {
 
   try {
     if (!caseId) {
-      // Return all cases
       let cases: any[] = [];
 
       if (dbAvailable) {
-        const dbCases = await Case.find({}).sort({ createdAt: -1 });
+        const dbCases = await Case.find({ user_id: userId }).sort({ createdAt: -1 });
         cases = dbCases.map((c: any) => ({
           ...c.toObject(),
           date: c.date || c.createdAt || new Date()
         }));
       }
 
-      // Merge in-memory cases (they may not be in DB)
-      const memCases = Array.from(inMemoryStore.values());
+      // Merge in-memory cases for this user
+      const memCases = Array.from(inMemoryStore.values()).filter((c: any) => c.user_id === userId);
       const dbCaseIds = new Set(cases.map((c: any) => c.case_id));
       for (const mc of memCases) {
         if (!dbCaseIds.has(mc.case_id)) {
@@ -236,39 +279,58 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Sort by date descending
       cases.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return NextResponse.json({ cases })
     }
 
-    // Single case lookup
+    // Single case lookup (scoped to user)
     if (dbAvailable) {
-      const result = await Case.findOne({ case_id: caseId });
+      const result = await Case.findOne({ case_id: caseId, user_id: userId });
       if (result) {
         const resultObj = result.toObject();
-        if (!resultObj.date) {
-          resultObj.date = resultObj.createdAt || new Date();
-        }
+        if (!resultObj.date) resultObj.date = resultObj.createdAt || new Date();
         return NextResponse.json(resultObj);
       }
     }
 
-    // Check in-memory store
     const memCase = inMemoryStore.get(caseId);
-    if (memCase) {
+    if (memCase && memCase.user_id === userId) {
       return NextResponse.json(memCase);
     }
 
     return NextResponse.json({ error: 'Case not found' }, { status: 404 })
   } catch (error: any) {
     console.error('Case fetch error:', error);
-    // Fall back to in-memory store on any error
-    const memCases = Array.from(inMemoryStore.values());
+    const memCases = Array.from(inMemoryStore.values()).filter((c: any) => c.user_id === userId);
     if (caseId) {
       const found = memCases.find((c: any) => c.case_id === caseId);
       return found ? NextResponse.json(found) : NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
     return NextResponse.json({ cases: memCases })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const userId = request.headers.get('X-User-Id') || 'anonymous';
+  try {
+    const { case_id, title, starred } = await request.json();
+    if (!case_id) return NextResponse.json({ error: 'case_id required' }, { status: 400 });
+
+    await dbConnect();
+    const update: any = {};
+    if (title !== undefined) update.title = title;
+    if (starred !== undefined) update.starred = starred;
+
+    const result = await Case.findOneAndUpdate(
+      { case_id, user_id: userId },
+      { $set: update },
+      { new: true }
+    );
+
+    if (!result) return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+    return NextResponse.json(result.toObject());
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
