@@ -35,7 +35,7 @@ export default function PublicReportPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-8">
+      <div className="min-h-screen bg-[#0a0a0a] text-[var(--text)] flex items-center justify-center p-8">
         <p className="text-text-secondary">{error}</p>
       </div>
     );
@@ -43,7 +43,7 @@ export default function PublicReportPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-8">
+      <div className="min-h-screen bg-[#0a0a0a] text-[var(--text)] flex items-center justify-center p-8">
         <p className="text-text-dim text-sm uppercase tracking-widest">Loading report…</p>
       </div>
     );
@@ -60,7 +60,7 @@ export default function PublicReportPage() {
     <div className="report-print-root min-h-screen bg-[#f4f4f5] text-[#111]">
       <header className="report-no-print sticky top-0 z-10 border-b border-black/10 bg-white/90 backdrop-blur px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#111] text-white flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-[#111] text-[var(--text)] flex items-center justify-center">
             <Shield size={20} />
           </div>
           <div>
@@ -71,7 +71,7 @@ export default function PublicReportPage() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111] text-white text-xs font-semibold uppercase tracking-wider"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111] text-[var(--text)] text-xs font-semibold uppercase tracking-wider"
         >
           <Printer size={14} />
           Print / Save as PDF

@@ -34,7 +34,7 @@ export function RiskChart({ data }: RiskChartProps) {
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <span className="text-xs font-semibold text-primary uppercase tracking-wide block mb-1">Risk Overview</span>
-                    <h3 className="text-base font-semibold text-white">Risk Profile</h3>
+                    <h3 className="text-base font-semibold text-[var(--text)]">Risk Profile</h3>
                 </div>
                 <span className="text-xs font-mono text-text-dim">{total} clauses</span>
             </div>
@@ -75,12 +75,12 @@ export function RiskChart({ data }: RiskChartProps) {
                 </ResponsiveContainer>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-semibold text-white">{total}</span>
+                    <span className="text-2xl font-semibold text-[var(--text)]">{total}</span>
                     <span className="text-[10px] uppercase tracking-wider text-text-dim font-medium">Issues</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/[0.05]">
+            <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
                 {chartData.map(item => (
                     <div key={item.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">

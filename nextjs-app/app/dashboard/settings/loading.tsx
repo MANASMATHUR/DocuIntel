@@ -8,7 +8,7 @@ export default function SettingsLoading() {
         </div>
 
         {[1, 2, 3].map(i => (
-          <div key={i} className="space-y-4 p-8 bg-white/[0.02] border border-white/[0.05] rounded-xl">
+          <div key={i} className="space-y-4 p-8 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl">
             <div className="h-5 w-32 bg-white/5 rounded" />
             <div className="h-10 w-full bg-white/5 rounded-xl" />
             <div className="h-10 w-full bg-white/5 rounded-xl" />

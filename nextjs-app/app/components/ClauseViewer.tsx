@@ -50,11 +50,11 @@ export default function ClauseViewer({ clauses }: ClauseViewerProps) {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-white/[0.05]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-3">
           <BookOpen size={18} className="text-primary" />
           <div>
-            <h2 className="text-lg font-semibold text-white">Clause Repository</h2>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Clause Repository</h2>
             <p className="text-xs text-text-dim">{clauses?.length || 0} clauses found</p>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default function ClauseViewer({ clauses }: ClauseViewerProps) {
             placeholder="Search clauses..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
+            className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all"
           />
         </div>
       </div>
@@ -82,19 +82,19 @@ export default function ClauseViewer({ clauses }: ClauseViewerProps) {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              className={`glass-card rounded-xl overflow-hidden transition-all ${isExpanded ? 'border-primary/20' : 'border-white/[0.06]'}`}
+              className={`glass-card rounded-xl overflow-hidden transition-all ${isExpanded ? 'border-primary/20' : 'border-[var(--border)]'}`}
             >
               <div
-                className="px-5 py-3.5 cursor-pointer flex justify-between items-center group hover:bg-white/[0.02] transition-colors"
+                className="px-5 py-3.5 cursor-pointer flex justify-between items-center group hover:bg-[var(--bg-card)] transition-colors"
                 onClick={() => toggleClause(clause.clause_id)}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white/5 text-text-dim'}`}>
+                  <div className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-primary text-[var(--text-inverse)]' : 'bg-white/5 text-text-dim'}`}>
                     <Terminal size={14} />
                   </div>
                   <div>
                     <span className="text-[10px] font-mono text-primary">Clause {index + 1}</span>
-                    <h3 className="text-sm font-medium text-white group-hover:text-primary transition-colors">
+                    <h3 className="text-sm font-medium text-[var(--text)] group-hover:text-primary transition-colors">
                       {clause.heading || 'Untitled Clause'}
                     </h3>
                   </div>
@@ -118,7 +118,7 @@ export default function ClauseViewer({ clauses }: ClauseViewerProps) {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-5 py-4 border-t border-white/[0.05] bg-white/[0.01]">
+                    <div className="px-5 py-4 border-t border-[var(--border)] bg-white/[0.01]">
                       <p className="text-sm text-text-secondary leading-relaxed font-mono">
                         {clause.body || "No clause content available."}
                       </p>

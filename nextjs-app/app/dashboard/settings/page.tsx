@@ -34,15 +34,15 @@ export default function SettingsPage() {
         }
     }, [settings.appearance.compactMode]);
 
-    // Apply theme to <html> element
+    // Apply theme to <html> element (default is gazette/light, dark is opt-in)
     useEffect(() => {
         const html = document.documentElement;
-        html.classList.remove('theme-light');
-        if (settings.appearance.theme === 'Light') {
-            html.classList.add('theme-light');
+        html.classList.remove('theme-dark');
+        if (settings.appearance.theme === 'Dark') {
+            html.classList.add('theme-dark');
         } else if (settings.appearance.theme === 'System') {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (!prefersDark) html.classList.add('theme-light');
+            if (prefersDark) html.classList.add('theme-dark');
         }
     }, [settings.appearance.theme]);
 
@@ -113,13 +113,13 @@ export default function SettingsPage() {
         <div className="space-y-8 max-w-[1000px]">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-4xl font-semibold tracking-tight text-white mb-2">Settings</h1>
+                    <h1 className="text-4xl font-semibold tracking-tight text-[var(--text)] mb-2">Settings</h1>
                     <p className="text-text-secondary">Manage your account preferences and application settings.</p>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-[var(--text)] rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                     Save Changes
@@ -145,7 +145,7 @@ export default function SettingsPage() {
                             <User size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold text-white">Profile Information</h2>
+                            <h2 className="text-xl font-semibold text-[var(--text)]">Profile Information</h2>
                             <p className="text-sm text-text-dim">Update your personal details</p>
                         </div>
                     </div>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
                                 type="text"
                                 value={settings.profile.fullName}
                                 onChange={(e) => setSettings({ ...settings, profile: { ...settings.profile, fullName: e.target.value } })}
-                                className="w-full px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                className="w-full px-4 py-2 rounded-lg bg-[var(--bg-subtle)] border border-white/10 text-[var(--text)] focus:outline-none focus:border-primary/50 transition-colors"
                             />
                         </div>
                         <div className="space-y-2">
@@ -166,7 +166,7 @@ export default function SettingsPage() {
                                 type="email"
                                 value={settings.profile.email}
                                 onChange={(e) => setSettings({ ...settings, profile: { ...settings.profile, email: e.target.value } })}
-                                className="w-full px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                className="w-full px-4 py-2 rounded-lg bg-[var(--bg-subtle)] border border-white/10 text-[var(--text)] focus:outline-none focus:border-primary/50 transition-colors"
                             />
                         </div>
                     </div>
@@ -184,15 +184,15 @@ export default function SettingsPage() {
                             <Bell size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold text-white">Notifications</h2>
+                            <h2 className="text-xl font-semibold text-[var(--text)]">Notifications</h2>
                             <p className="text-sm text-text-dim">Configure how you receive alerts</p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03]">
+                        <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-subtle)]">
                             <div>
-                                <p className="font-medium text-white">Email Notifications</p>
+                                <p className="font-medium text-[var(--text)]">Email Notifications</p>
                                 <p className="text-sm text-text-dim">Receive updates about your cases via email</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                             <Monitor size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold text-white">Appearance</h2>
+                            <h2 className="text-xl font-semibold text-[var(--text)]">Appearance</h2>
                             <p className="text-sm text-text-dim">Customize the interface and workspace density</p>
                         </div>
                     </div>
@@ -232,16 +232,16 @@ export default function SettingsPage() {
                                 onClick={() => setSettings({ ...settings, appearance: { ...settings.appearance, theme } })}
                                 className={`p-4 rounded-lg border ${settings.appearance.theme === theme
                                         ? 'bg-primary/10 border-primary/50 text-primary'
-                                        : 'bg-white/[0.03] border-white/10 text-text-dim hover:bg-white/5'
+                                        : 'bg-[var(--bg-subtle)] border-white/10 text-text-dim hover:bg-white/5'
                                     } transition-all`}
                             >
                                 {theme}
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.03]">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--bg-subtle)]">
                         <div>
-                            <p className="font-medium text-white">Compact Density</p>
+                            <p className="font-medium text-[var(--text)]">Compact Density</p>
                             <p className="text-sm text-text-dim">Reduce spacing to fit more content on-screen</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">

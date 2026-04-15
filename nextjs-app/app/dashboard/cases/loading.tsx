@@ -14,17 +14,17 @@ export default function CasesLoading() {
         {/* Stat cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-white/[0.02] border border-white/[0.05] rounded-xl" />
+            <div key={i} className="h-24 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl" />
           ))}
         </div>
 
         {/* Search bar */}
-        <div className="h-12 bg-white/[0.02] border border-white/[0.05] rounded-xl" />
+        <div className="h-12 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl" />
 
         {/* Case list */}
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-20 bg-white/[0.02] border border-white/[0.05] rounded-xl" />
+            <div key={i} className="h-20 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl" />
           ))}
         </div>
       </div>

@@ -16,7 +16,7 @@ export function CaseCollaborationPanel({ caseId, clauses }: Props) {
   const pinnedClauses = clauses.filter((c) => collab.pinnedClauseIds.includes(c.clause_id));
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-5">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-accent uppercase tracking-wide">Collaboration</span>
         <Pin size={13} className="text-text-dim" />
@@ -32,7 +32,7 @@ export function CaseCollaborationPanel({ caseId, clauses }: Props) {
             value={collab.assignedTo}
             onChange={(e) => collab.setAssignedTo(e.target.value)}
             placeholder="Name or team"
-            className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-text-dim focus:outline-none focus:border-primary/40"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-sm text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-primary/40"
           />
         </div>
         <div className="space-y-1.5">
@@ -43,7 +43,7 @@ export function CaseCollaborationPanel({ caseId, clauses }: Props) {
             type="date"
             value={collab.dueDate}
             onChange={(e) => collab.setDueDate(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-primary/40"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:border-primary/40"
           />
         </div>
       </div>
@@ -58,7 +58,7 @@ export function CaseCollaborationPanel({ caseId, clauses }: Props) {
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
             placeholder="Add a note..."
-            className="flex-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-text-dim focus:outline-none focus:border-primary/40 resize-none"
+            className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-sm text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-primary/40 resize-none"
           />
           <button
             type="button"
@@ -76,7 +76,7 @@ export function CaseCollaborationPanel({ caseId, clauses }: Props) {
             {collab.notes.map((n) => (
               <li
                 key={n.id}
-                className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-text-secondary relative group"
+                className="p-3 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-sm text-text-secondary relative group"
               >
                 <p className="pr-6">{n.text}</p>
                 <p className="text-[10px] text-text-dim mt-1 font-mono">
