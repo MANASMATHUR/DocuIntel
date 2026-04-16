@@ -17,6 +17,22 @@ const PUBLIC_ROUTES = ['/api/health', '/api/providers', '/api/auth/'];
 // Pages that require login (redirect to /login if not authenticated)
 const PROTECTED_PAGES = ['/dashboard'];
 
+/** Strip client-supplied identity headers; only middleware may set these on the forwarded request. */
+function buildTrustedRequestHeaders(request: NextRequest, user: {
+    userId: string;
+    email: string;
+    name: string;
+}): Headers {
+    const headers = new Headers(request.headers);
+    headers.delete('x-user-id');
+    headers.delete('x-user-email');
+    headers.delete('x-user-name');
+    headers.set('X-User-Id', user.userId);
+    headers.set('X-User-Email', user.email);
+    headers.set('X-User-Name', user.name);
+    return headers;
+}
+
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
@@ -30,14 +46,24 @@ export async function middleware(request: NextRequest) {
         return addCORS(NextResponse.next());
     }
 
+    // Public read-only shared report JSON (token is the secret); POST stays under /api/reports auth
+    if (pathname.startsWith('/api/reports/share') && request.method === 'GET') {
+        return addCORS(NextResponse.next());
+    }
+
     // Get user from cookie
     const token = request.cookies.get(COOKIE_NAME)?.value;
-    let user = null;
+    let user: { userId: string; email: string; name: string; role?: string } | null = null;
 
     if (token) {
         try {
             const { payload } = await jwtVerify(token, JWT_SECRET);
-            user = payload;
+            user = {
+                userId: payload.userId as string,
+                email: (payload.email as string) || '',
+                name: (payload.name as string) || '',
+                role: payload.role as string | undefined,
+            };
         } catch {
             // Token invalid/expired — clear it
         }
@@ -60,11 +86,10 @@ export async function middleware(request: NextRequest) {
                 NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
             );
         }
-        // Attach user info to request headers for downstream routes
-        const response = addCORS(NextResponse.next());
-        response.headers.set('X-User-Id', user.userId as string);
-        response.headers.set('X-User-Email', user.email as string);
-        response.headers.set('X-User-Name', user.name as string);
+        const requestHeaders = buildTrustedRequestHeaders(request, user);
+        const response = addCORS(
+            NextResponse.next({ request: { headers: requestHeaders } })
+        );
         return response;
     }
 

@@ -4,6 +4,8 @@ import path from 'path';
 export type SharedReportRecord = {
   token: string;
   createdAt: string;
+  /** Mongo user id of creator; not exposed on public GET (absent on legacy shares) */
+  ownerUserId?: string;
   caseData: Record<string, unknown>;
 };
 
@@ -25,11 +27,16 @@ async function writeAll(data: Record<string, SharedReportRecord>): Promise<void>
   await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
-export async function saveSharedReport(caseData: Record<string, unknown>, token: string): Promise<SharedReportRecord> {
+export async function saveSharedReport(
+  caseData: Record<string, unknown>,
+  token: string,
+  ownerUserId: string
+): Promise<SharedReportRecord> {
   const all = await readAll();
   const record: SharedReportRecord = {
     token,
     createdAt: new Date().toISOString(),
+    ownerUserId,
     caseData,
   };
   all[token] = record;

@@ -22,6 +22,12 @@ const UserSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user',
     },
+    /** Ephemeral demo / guest accounts (tenant isolation); safe to TTL-clean in production */
+    isGuest: {
+        type: Boolean,
+        default: false,
+        index: true,
+    },
     stats: {
         casesAnalyzed: { type: Number, default: 0 },
         clausesReviewed: { type: Number, default: 0 },

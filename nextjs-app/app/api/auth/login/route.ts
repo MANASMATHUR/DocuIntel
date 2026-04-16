@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
-import { createToken, setAuthCookie, DEMO_USER } from '@/lib/auth';
+import { createToken, setAuthCookie } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
     try {
@@ -10,17 +11,17 @@ export async function POST(request: NextRequest) {
 
         await dbConnect();
 
-        // Demo login: auto-create demo user if needed
+        // Demo login: new isolated guest user each time (no shared tenant with other demos)
         if (demo) {
-            let user = await User.findOne({ email: DEMO_USER.email });
-            if (!user) {
-                const hashedPassword = await bcrypt.hash(DEMO_USER.password, 12);
-                user = await User.create({
-                    email: DEMO_USER.email,
-                    password: hashedPassword,
-                    name: DEMO_USER.name,
-                });
-            }
+            const guestEmail = `guest+${randomUUID()}@docuintel.internal`.toLowerCase();
+            const randomSecret = randomUUID() + randomUUID();
+            const hashedPassword = await bcrypt.hash(randomSecret, 12);
+            const user = await User.create({
+                email: guestEmail,
+                password: hashedPassword,
+                name: 'Demo visitor',
+                isGuest: true,
+            });
 
             const token = await createToken({
                 userId: user._id.toString(),
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
                     email: user.email,
                     name: user.name,
                     role: user.role,
+                    isGuest: true,
                 },
             });
         }

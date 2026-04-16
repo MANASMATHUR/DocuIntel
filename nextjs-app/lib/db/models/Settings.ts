@@ -5,7 +5,6 @@ const SettingsSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        default: 'demo-user', // For MVP
     },
     profile: {
         fullName: String,

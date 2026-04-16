@@ -4,13 +4,17 @@ import { getSharedReport, saveSharedReport } from '@/lib/report-share-store';
 
 export async function POST(request: NextRequest) {
   try {
+    const ownerUserId = request.headers.get('X-User-Id');
+    if (!ownerUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     const caseData = body?.caseData as Record<string, unknown> | undefined;
     if (!caseData || typeof caseData !== 'object') {
       return NextResponse.json({ error: 'caseData is required' }, { status: 400 });
     }
     const token = randomUUID().replace(/-/g, '').slice(0, 24);
-    await saveSharedReport(caseData, token);
+    await saveSharedReport(caseData, token, ownerUserId);
     return NextResponse.json({ token, path: `/report/${token}` });
   } catch (e: any) {
     console.error('share report error', e);
@@ -27,5 +31,6 @@ export async function GET(request: NextRequest) {
   if (!record) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  return NextResponse.json(record);
+  const { ownerUserId: _owner, ...publicPayload } = record;
+  return NextResponse.json(publicPayload);
 }

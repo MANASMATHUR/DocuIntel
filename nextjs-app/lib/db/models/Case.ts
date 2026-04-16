@@ -42,4 +42,6 @@ const CaseSchema = new mongoose.Schema({
     analysis_meta: mongoose.Schema.Types.Mixed,
 }, { timestamps: true });
 
+CaseSchema.index({ user_id: 1, case_id: 1 });
+
 export default mongoose.models.Case || mongoose.model('Case', CaseSchema);

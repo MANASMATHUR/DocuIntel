@@ -67,10 +67,3 @@ export async function getCurrentUser(): Promise<UserPayload | null> {
     const result = await validateToken(token);
     return result.success ? result.user! : null;
 }
-
-// Demo user for one-click login
-export const DEMO_USER = {
-    email: 'demo@docuintel.ai',
-    name: 'Demo User',
-    password: 'demo123',
-};
