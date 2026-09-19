@@ -76,9 +76,67 @@ export class AIService {
     }
 
     /**
+     * Analyze multiple clauses in a single LLM call (cost optimization)
+     */
+    async analyzeClausesBatch(clauses: string[], policy: string = 'Standard commercial terms'): Promise<any[]> {
+        if (clauses.length === 0) return [];
+        if (this.providers.length === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            return clauses.map(() => MOCK_RISK_ANALYSIS);
+        }
+
+        const numbered = clauses
+            .map((c, i) => `[CLAUSE ${i + 1}]\n${c.slice(0, 2000)}`)
+            .join('\n\n');
+
+        for (let i = 0; i < this.providers.length; i++) {
+            const providerIndex = (this.activeProviderIndex + i) % this.providers.length;
+            const { client, config } = this.providers[providerIndex];
+
+            try {
+                const completion = await client.chat.completions.create({
+                    model: config.model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are an expert legal AI. Analyze each numbered clause against this policy: "${policy}".
+Return a JSON object with key "results" — an array of ${clauses.length} objects in order, each with:
+- risk_score (0.0 to 1.0)
+- severity ("low", "medium", "high", "critical")
+- rationale (concise explanation)
+- recommendation (actionable advice)
+- redline (suggested rewrite)`,
+                        },
+                        { role: 'user', content: numbered },
+                    ],
+                    response_format: { type: 'json_object' },
+                    temperature: 0.3,
+                });
+
+                const parsed = JSON.parse(completion.choices[0].message.content || '{}');
+                const results = Array.isArray(parsed.results) ? parsed.results : [];
+                this.activeProviderIndex = providerIndex;
+
+                while (results.length < clauses.length) {
+                    results.push(MOCK_RISK_ANALYSIS);
+                }
+                return results.slice(0, clauses.length);
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : 'batch failed';
+                console.error(`❌ ${config.name} batch failed:`, message);
+                if (i === this.providers.length - 1) {
+                    return Promise.all(clauses.map((c) => this.analyzeClauseRisk(c, policy)));
+                }
+            }
+        }
+
+        return clauses.map(() => MOCK_RISK_ANALYSIS);
+    }
+
+    /**
      * Analyze a clause with automatic provider fallback
      */
-    async analyzeClauseRisk(clauseText: string, policy: string = "Standard commercial terms"): Promise<any> {
+    async analyzeClauseRisk(clauseText: string, policy: string = "Standard commercial terms", ragContext?: string): Promise<any> {
         if (this.providers.length === 0) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             return MOCK_RISK_ANALYSIS;
@@ -98,6 +156,7 @@ export class AIService {
                         {
                             role: "system",
                             content: `You are an expert legal AI. Analyze the following contract clause against this policy: "${policy}". 
+${ragContext ? `Use this retrieved document context for grounding:\n${ragContext}\n` : ''}
 Return a JSON object with:
 - risk_score (0.0 to 1.0)
 - severity ("low", "medium", "high", "critical")

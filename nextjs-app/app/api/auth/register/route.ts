@@ -3,28 +3,37 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
 import { createToken, setAuthCookie } from '@/lib/auth';
+import { registerSchema } from '@/lib/validators/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password, name } = await request.json();
-
-        if (!email || !password || !name) {
+        const body = await request.json();
+        const parsed = registerSchema.safeParse(body);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: 'Name, email, and password are required' },
+                { error: parsed.error.issues[0]?.message || 'Invalid input' },
                 { status: 400 }
             );
         }
 
-        if (password.length < 6) {
-            return NextResponse.json(
-                { error: 'Password must be at least 6 characters' },
-                { status: 400 }
-            );
+        const { email, password, name } = parsed.data;
+
+        let dbAvailable = true;
+        try {
+            await dbConnect();
+        } catch (e) {
+            console.warn('DB connection failed in register route, using fallback mode');
+            dbAvailable = false;
         }
 
-        await dbConnect();
+        let existing;
+        if (dbAvailable) {
+            existing = await User.findOne({ email: email.toLowerCase() });
+        } else {
+            const { getFallbackUserByEmail } = await import('@/lib/db/memory-fallback');
+            existing = getFallbackUserByEmail(email.toLowerCase());
+        }
 
-        const existing = await User.findOne({ email: email.toLowerCase() });
         if (existing) {
             return NextResponse.json(
                 { error: 'An account with this email already exists' },
@@ -34,11 +43,22 @@ export async function POST(request: NextRequest) {
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        const user = await User.create({
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            name: name.trim(),
-        });
+        let user;
+        if (dbAvailable) {
+            user = await User.create({
+                email: email.toLowerCase(),
+                password: hashedPassword,
+                name: name.trim(),
+                accounts: [{ provider: 'credentials', providerAccountId: email.toLowerCase() }],
+            });
+        } else {
+            const { createFallbackUser } = await import('@/lib/db/memory-fallback');
+            user = createFallbackUser({
+                email: email.toLowerCase(),
+                password: hashedPassword,
+                name: name.trim(),
+            });
+        }
 
         const token = await createToken({
             userId: user._id.toString(),
@@ -57,7 +77,7 @@ export async function POST(request: NextRequest) {
                 role: user.role,
             },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Registration error:', error);
         return NextResponse.json(
             { error: 'Registration failed. Please try again.' },

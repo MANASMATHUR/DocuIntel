@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Scale, AlertTriangle, FileEdit, MessageSquare, BarChart3, Database, Upload, Search, FileCheck, Download, Bell, ArrowRight, GitCompare, BookOpen, Plug, CreditCard, Shield, FileSignature, Cloud } from 'lucide-react'
+import { SystemStatusBadge } from '@/components/landing/system-status-badge'
 
 const CAPABILITIES = [
     { icon: Scale, title: 'Clause Segmentation', desc: 'Automatically breaks contracts into individual clauses for granular, line-by-line analysis. Supports PDF, DOCX, and plain text.' },
@@ -16,6 +17,7 @@ const CAPABILITIES = [
 ]
 
 const INTEGRATIONS = [
+    { icon: Shield, name: 'Google & Apple OAuth', desc: 'Social sign-in via Auth.js with account linking' },
     { icon: CreditCard, name: 'Stripe', desc: 'Subscription billing with free and paid tiers' },
     { icon: Cloud, name: 'Google Drive', desc: 'Import contracts directly from your Drive' },
     { icon: FileSignature, name: 'DocuSign', desc: 'Send approved redlines for e-signature' },
@@ -87,7 +89,7 @@ export default function LandingPage() {
 
             {/* Masthead */}
             <section className="border-b py-10 text-center" style={{ borderColor: '#d4cfc5' }}>
-                <p className="text-[10px] uppercase tracking-[0.4em] mb-4" style={{ color: '#888' }}>{today}</p>
+                <p className="text-[10px] uppercase tracking-[0.4em] mb-4" style={{ color: '#888' }} suppressHydrationWarning>{today}</p>
                 <h1 className="text-6xl md:text-8xl font-black tracking-tight" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>
                     DocuIntel
                 </h1>
@@ -151,9 +153,9 @@ export default function LandingPage() {
                             <p className="text-xs italic mt-1" style={{ color: '#888' }}>Stripe, Slack, Google Drive, DocuSign, Webhooks, Resend</p>
                         </div>
                         <div className="border-t pt-6" style={{ borderColor: '#d4cfc5' }}>
-                            <p className="text-3xl font-bold" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>Full Auth</p>
-                            <p className="text-xs font-semibold uppercase tracking-wider mt-1">Per-User Workspace</p>
-                            <p className="text-xs italic mt-1" style={{ color: '#888' }}>Signup, login, password reset, demo mode</p>
+                            <p className="text-3xl font-bold" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>Enterprise Auth</p>
+                            <p className="text-xs font-semibold uppercase tracking-wider mt-1">OAuth + Security</p>
+                            <p className="text-xs italic mt-1" style={{ color: '#888' }}>Google, Apple, rate limits, CSP, account linking</p>
                         </div>
                     </div>
                 </div>
@@ -322,7 +324,7 @@ export default function LandingPage() {
                         </h2>
                     </div>
                     <div className="flex flex-wrap justify-center gap-4 text-xs font-medium uppercase tracking-wider" style={{ color: '#888' }}>
-                        {['Next.js 14', 'TypeScript', 'React 18', 'Tailwind CSS', 'OpenAI GPT-4o-mini', 'MongoDB Atlas', 'Mongoose', 'Stripe', 'Resend', 'jose (JWT)', 'bcrypt', 'pdf-parse', 'mammoth', 'Recharts', 'Framer Motion'].map((tech, i) => (
+                        {['Next.js 14', 'Auth.js v5', 'TanStack Query', 'TypeScript', 'OpenAI GPT-4o-mini', 'MongoDB Atlas', 'Stripe', 'Zod', 'Server Components', 'Docker', 'GitHub Actions'].map((tech, i) => (
                             <span key={i} className="px-3 py-2 border" style={{ borderColor: '#d4cfc5' }}>{tech}</span>
                         ))}
                     </div>
@@ -341,7 +343,10 @@ export default function LandingPage() {
                         <Link href="/dashboard" className="hover:text-black transition-colors">Dashboard</Link>
                         <Link href="/login" className="hover:text-black transition-colors">Sign In</Link>
                     </div>
-                    <p className="text-xs" style={{ color: '#aaa' }}>© 2025 DocuIntel. MIT License.</p>
+                    <div className="flex flex-col items-center md:items-end gap-2">
+                        <SystemStatusBadge />
+                        <p className="text-xs" style={{ color: '#aaa' }}>© 2026 DocuIntel. MIT License.</p>
+                    </div>
                 </div>
             </footer>
         </div>

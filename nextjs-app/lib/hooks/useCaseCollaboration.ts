@@ -18,40 +18,51 @@ const defaultState: CaseCollaborationState = {
   pinnedClauseIds: [],
 };
 
-function storageKey(caseId: string) {
-  return `case_collab_${caseId}`;
+async function loadCollaboration(caseId: string): Promise<CaseCollaborationState> {
+  const res = await fetch(`/api/cases?case_id=${encodeURIComponent(caseId)}`);
+  if (!res.ok) return defaultState;
+  const data = await res.json();
+  const collab = data.collaboration;
+  if (!collab) return defaultState;
+  return {
+    assignedTo: collab.assignedTo || '',
+    dueDate: collab.dueDate || '',
+    notes: Array.isArray(collab.notes) ? collab.notes : [],
+    pinnedClauseIds: Array.isArray(collab.pinnedClauseIds) ? collab.pinnedClauseIds : [],
+  };
+}
+
+async function saveCollaboration(caseId: string, state: CaseCollaborationState) {
+  await fetch('/api/cases', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ case_id: caseId, collaboration: state }),
+  });
 }
 
 export function useCaseCollaboration(caseId: string | null) {
   const [state, setState] = useState<CaseCollaborationState>(defaultState);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!caseId || typeof window === 'undefined') {
+    if (!caseId) {
       setState(defaultState);
+      setLoaded(false);
       return;
     }
-    try {
-      const raw = window.localStorage.getItem(storageKey(caseId));
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<CaseCollaborationState>;
-        setState({
-          assignedTo: typeof parsed.assignedTo === 'string' ? parsed.assignedTo : '',
-          dueDate: typeof parsed.dueDate === 'string' ? parsed.dueDate : '',
-          notes: Array.isArray(parsed.notes) ? parsed.notes : [],
-          pinnedClauseIds: Array.isArray(parsed.pinnedClauseIds) ? parsed.pinnedClauseIds : [],
-        });
-      } else {
-        setState(defaultState);
-      }
-    } catch {
-      setState(defaultState);
-    }
+    loadCollaboration(caseId).then((data) => {
+      setState(data);
+      setLoaded(true);
+    });
   }, [caseId]);
 
   useEffect(() => {
-    if (!caseId || typeof window === 'undefined') return;
-    window.localStorage.setItem(storageKey(caseId), JSON.stringify(state));
-  }, [caseId, state]);
+    if (!caseId || !loaded) return;
+    const timer = setTimeout(() => {
+      saveCollaboration(caseId, state);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [caseId, state, loaded]);
 
   const setAssignedTo = useCallback((v: string) => {
     setState((s) => ({ ...s, assignedTo: v }));

@@ -27,6 +27,8 @@ export function DashboardLayout({ children, activeTab, onTabChange }: DashboardL
         ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
         : '?';
 
+    const avatarUrl = user?.image;
+
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase();
 
     return (
@@ -63,8 +65,13 @@ export function DashboardLayout({ children, activeTab, onTabChange }: DashboardL
                 {/* User */}
                 <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
                     <div className="flex items-center gap-3 px-3 py-2">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[11px]" style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-                            {initials}
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[11px] overflow-hidden" style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+                            {avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                initials
+                            )}
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{user?.name || 'Loading...'}</p>
@@ -83,7 +90,7 @@ export function DashboardLayout({ children, activeTab, onTabChange }: DashboardL
                 <header className="border-b flex items-center justify-between px-8 py-2" style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}>
                     <div className="flex items-center gap-3">
                         <FileText size={14} style={{ color: 'var(--text-dim)' }} />
-                        <span className="text-[10px] uppercase tracking-[0.15em] font-medium" style={{ color: 'var(--text-dim)' }}>{today}</span>
+                        <span className="text-[10px] uppercase tracking-[0.15em] font-medium" style={{ color: 'var(--text-dim)' }} suppressHydrationWarning>{today}</span>
                     </div>
                     <span className="text-[10px] uppercase tracking-[0.15em] font-semibold" style={{ color: 'var(--text-dim)' }}>Final Edition</span>
                 </header>

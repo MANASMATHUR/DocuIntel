@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
 import { getCurrentUser } from '@/lib/auth';
+import { verifyOAuthState } from '@/lib/oauth-state';
 
 export async function GET(request: NextRequest) {
     const code = request.nextUrl.searchParams.get('code');
+    const state = request.nextUrl.searchParams.get('state');
+
     if (!code) return NextResponse.redirect(new URL('/dashboard/integrations?error=no_code', request.url));
+
+    if (!state || !(await verifyOAuthState(state, 'docusign'))) {
+        return NextResponse.redirect(new URL('/dashboard/integrations?error=invalid_state', request.url));
+    }
 
     try {
         const user = await getCurrentUser();
@@ -32,7 +39,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(new URL('/dashboard/integrations?error=token_failed', request.url));
         }
 
-        // Get account info
         const userInfoRes = await fetch('https://account-d.docusign.com/oauth/userinfo', {
             headers: { Authorization: `Bearer ${tokens.access_token}` },
         });
@@ -44,7 +50,7 @@ export async function GET(request: NextRequest) {
             docusignToken: {
                 access_token: tokens.access_token,
                 refresh_token: tokens.refresh_token,
-                expires_at: Date.now() + (tokens.expires_in * 1000),
+                expires_at: Date.now() + tokens.expires_in * 1000,
                 account_id: account?.account_id,
                 base_uri: account?.base_uri,
             },

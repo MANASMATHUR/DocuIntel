@@ -23,7 +23,7 @@ export default function PerformanceDashboard() {
 
     useEffect(() => {
         fetchMetrics();
-        const interval = setInterval(fetchMetrics, 30000);
+        const interval = setInterval(fetchMetrics, 60000);
         return () => clearInterval(interval);
     }, []);
 

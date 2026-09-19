@@ -8,40 +8,35 @@ export type RiskSnapshot = {
 
 const MAX = 12;
 
-function key(caseId: string) {
-  return `risk_hist_${caseId}`;
-}
-
-export function loadRiskHistory(caseId: string): RiskSnapshot[] {
+export async function loadRiskHistory(caseId: string): Promise<RiskSnapshot[]> {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(key(caseId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const res = await fetch(`/api/cases?case_id=${encodeURIComponent(caseId)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.riskHistory) ? data.riskHistory : [];
   } catch {
     return [];
   }
 }
 
-export function appendRiskSnapshot(caseId: string, counts: Omit<RiskSnapshot, 'at'>): RiskSnapshot[] {
+export async function appendRiskSnapshot(
+  caseId: string,
+  counts: Omit<RiskSnapshot, 'at'>
+): Promise<RiskSnapshot[]> {
   if (typeof window === 'undefined') return [];
-  const prev = loadRiskHistory(caseId);
-  const next: RiskSnapshot = {
-    at: new Date().toISOString(),
-    ...counts,
-  };
-  const last = prev[0];
-  if (
-    last &&
-    last.critical === next.critical &&
-    last.high === next.high &&
-    last.medium === next.medium &&
-    last.low === next.low
-  ) {
-    return prev;
+  try {
+    const res = await fetch('/api/cases', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ case_id: caseId, appendRiskSnapshot: counts }),
+    });
+    if (!res.ok) return loadRiskHistory(caseId);
+    const data = await res.json();
+    return Array.isArray(data.riskHistory) ? data.riskHistory : [];
+  } catch {
+    return [];
   }
-  const merged = [next, ...prev].slice(0, MAX);
-  window.localStorage.setItem(key(caseId), JSON.stringify(merged));
-  return merged;
 }
+
+export { MAX as RISK_HISTORY_MAX };

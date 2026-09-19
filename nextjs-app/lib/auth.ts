@@ -1,12 +1,20 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = new TextEncoder().encode(
-    process.env.JWT_SECRET || 'docuintel-dev-secret-change-in-prod'
-);
+const DEV_SECRET = 'docuintel-dev-secret-change-in-prod';
+
+function getJwtSecret(): Uint8Array {
+    const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET || DEV_SECRET;
+    if (process.env.NODE_ENV === 'production' && (!secret || secret === DEV_SECRET)) {
+        throw new Error('JWT_SECRET or AUTH_SECRET must be set in production');
+    }
+    return new TextEncoder().encode(secret);
+}
+
+const JWT_SECRET = getJwtSecret();
 
 const TOKEN_EXPIRY = '7d';
-const COOKIE_NAME = 'docuintel-token';
+export const COOKIE_NAME = 'docuintel-token';
 
 export interface UserPayload {
     userId: string;
@@ -66,4 +74,14 @@ export async function getCurrentUser(): Promise<UserPayload | null> {
     if (!token) return null;
     const result = await validateToken(token);
     return result.success ? result.user! : null;
+}
+
+export function getCookieClearOptions() {
+    return {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+        path: '/',
+        maxAge: 0,
+    };
 }

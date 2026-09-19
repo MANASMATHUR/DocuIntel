@@ -110,8 +110,8 @@ function DashboardPageContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(data => { if (data.user?.stats) setUserStats(data.user.stats); }).catch(() => {});
-  }, [result]);
+    if (user?.stats) setUserStats(user.stats);
+  }, [user?.stats]);
 
   const collab = useCaseCollaboration(result?.case_id ?? null);
   const riskCountsKey = useMemo(() => JSON.stringify(result?.reports?.executive_summary?.risk_counts || result?.summary || {}), [result?.reports?.executive_summary?.risk_counts, result?.summary]);
@@ -119,9 +119,16 @@ function DashboardPageContent() {
   useEffect(() => {
     if (!result?.case_id) { setRiskHistory([]); return; }
     const rc = result.reports?.executive_summary?.risk_counts || result.summary || {};
-    const next = appendRiskSnapshot(result.case_id, { critical: Number(rc.critical) || 0, high: Number(rc.high) || 0, medium: Number(rc.medium) || 0, low: Number(rc.low) || 0 });
-    setRiskHistory(next.length ? next : loadRiskHistory(result.case_id));
-  }, [result?.case_id, riskCountsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    (async () => {
+      const next = await appendRiskSnapshot(result.case_id, {
+        critical: Number(rc.critical) || 0,
+        high: Number(rc.high) || 0,
+        medium: Number(rc.medium) || 0,
+        low: Number(rc.low) || 0,
+      });
+      setRiskHistory(next.length ? next : await loadRiskHistory(result.case_id));
+    })();
+  }, [result?.case_id, riskCountsKey, result?.reports?.executive_summary?.risk_counts, result?.summary]);
 
   const analyzeContract = async () => {
     if (!file) return;
@@ -144,7 +151,7 @@ function DashboardPageContent() {
   const exportReport = async (format: 'txt' | 'html' = 'txt') => {
     if (!result) return; setIsExporting(true);
     try {
-      const res = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseData: result, format }) });
+      const res = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_id: result.case_id, format }) });
       const blob = await res.blob(); const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `DocuIntel_Report_${result.case_id}.${format}`;
       document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);

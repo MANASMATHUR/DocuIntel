@@ -314,13 +314,35 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const userId = request.headers.get('X-User-Id') || 'anonymous';
   try {
-    const { case_id, title, starred } = await request.json();
+    const body = await request.json();
+    const { case_id, title, starred, archived, collaboration, riskHistory, appendRiskSnapshot } = body;
     if (!case_id) return NextResponse.json({ error: 'case_id required' }, { status: 400 });
 
     await dbConnect();
-    const update: any = {};
+    const update: Record<string, unknown> = {};
     if (title !== undefined) update.title = title;
     if (starred !== undefined) update.starred = starred;
+    if (archived !== undefined) update.archived = archived;
+    if (collaboration !== undefined) update.collaboration = collaboration;
+
+    if (appendRiskSnapshot) {
+      const existing = await Case.findOne({ case_id, user_id: userId });
+      if (!existing) return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+      const history = existing.riskHistory || [];
+      const snap = { at: new Date().toISOString(), ...appendRiskSnapshot };
+      const last = history[0];
+      const duplicate =
+        last &&
+        last.critical === snap.critical &&
+        last.high === snap.high &&
+        last.medium === snap.medium &&
+        last.low === snap.low;
+      if (!duplicate) {
+        update.riskHistory = [snap, ...history].slice(0, 12);
+      }
+    } else if (riskHistory !== undefined) {
+      update.riskHistory = riskHistory;
+    }
 
     const result = await Case.findOneAndUpdate(
       { case_id, user_id: userId },
@@ -330,7 +352,8 @@ export async function PATCH(request: NextRequest) {
 
     if (!result) return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     return NextResponse.json(result.toObject());
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Update failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

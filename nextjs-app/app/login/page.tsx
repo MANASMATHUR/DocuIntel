@@ -1,13 +1,13 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Shield, Loader2, Zap } from 'lucide-react';
+import { OAuthSection } from '@/components/auth/oauth-section';
 
 function LoginForm() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const from = searchParams.get('from') || '/dashboard';
 
@@ -51,7 +51,8 @@ function LoginForm() {
                 body: JSON.stringify({ demo: true }),
             });
             if (!res.ok) {
-                setError('Demo login failed');
+                const data = await res.json();
+                setError(data.error || 'Demo login failed');
                 return;
             }
             window.location.href = from;
@@ -61,6 +62,8 @@ function LoginForm() {
             setDemoLoading(false);
         }
     };
+
+    const showDemo = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === 'true';
 
     return (
         <div className="min-h-screen bg-bg flex items-center justify-center px-4">
@@ -76,6 +79,8 @@ function LoginForm() {
                     <h1 className="text-2xl font-semibold text-text">Welcome back</h1>
                     <p className="text-sm text-text-dim mt-1">Sign in to DocuIntel</p>
                 </div>
+
+                <OAuthSection callbackUrl={from} mode="login" />
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     {error && (
@@ -122,23 +127,27 @@ function LoginForm() {
                     </button>
                 </form>
 
-                <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-[var(--border)]" />
-                    </div>
-                    <div className="relative flex justify-center">
-                        <span className="bg-bg px-3 text-xs text-text-dim">or</span>
-                    </div>
-                </div>
+                {showDemo && (
+                    <>
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-[var(--border)]" />
+                            </div>
+                            <div className="relative flex justify-center">
+                                <span className="bg-bg px-3 text-xs text-text-dim">or</span>
+                            </div>
+                        </div>
 
-                <button
-                    onClick={handleDemoLogin}
-                    disabled={demoLoading}
-                    className="w-full py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-accent font-medium text-sm hover:bg-accent/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                    {demoLoading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-                    Try Demo (no signup needed)
-                </button>
+                        <button
+                            onClick={handleDemoLogin}
+                            disabled={demoLoading}
+                            className="w-full py-2.5 rounded-lg bg-accent/10 border border-accent/20 text-accent font-medium text-sm hover:bg-accent/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {demoLoading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                            Try Demo (no signup needed)
+                        </button>
+                    </>
+                )}
 
                 <p className="text-center text-sm text-text-dim mt-6">
                     No account?{' '}

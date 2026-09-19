@@ -11,7 +11,9 @@
   <img src="https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?style=for-the-badge&logo=openai" alt="OpenAI"/>
   <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb" alt="MongoDB"/>
   <img src="https://img.shields.io/badge/Stripe-Billing-635BFF?style=for-the-badge&logo=stripe" alt="Stripe"/>
-  <img src="https://img.shields.io/badge/Python-3.11-yellow?style=for-the-badge&logo=python" alt="Python"/>
+  <img src="https://img.shields.io/badge/Auth.js-v5-000?style=for-the-badge&logo=auth0" alt="Auth.js"/>
+  <img src="https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" alt="TanStack Query"/>
+  <img src="https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI"/>
 </p>
 
 ---
@@ -38,9 +40,12 @@ DocuIntel is a production-grade SaaS platform for legal contract analysis. Uploa
 - Full pipeline instrumented with agent logs and latency tracking
 
 ### Authentication and Per-User Data
-- Email/password signup and login with bcrypt hashing and JWT cookies
-- One-click demo login for frictionless onboarding
+- **Google & Apple OAuth** via Auth.js v5, plus email/password credentials
+- JWT HTTP-only cookies with middleware-injected trusted identity headers
+- Account linking UI showing connected sign-in methods
+- One-click demo login (dev only) with auto-expiring guest accounts
 - Password reset via time-limited email tokens (Resend)
+- Rate limiting, Zod validation, OAuth CSRF state on integrations
 - Every user sees only their own cases, settings, and stats
 
 ### Case Management
@@ -183,7 +188,9 @@ flowchart TB
 | **AI** | OpenAI API (gpt-4o-mini) | Clause analysis, risk scoring, negotiation |
 | **Embeddings** | OpenAI text-embedding-3-small | Semantic clause retrieval |
 | **Database** | MongoDB Atlas + Mongoose | Users, cases, settings, templates, tokens |
-| **Auth** | JWT (jose) + bcrypt | Cookie-based auth, password hashing |
+| **Auth** | Auth.js v5 (Google, Apple, credentials) + JWT cookies | OAuth, session bridge, account linking |
+| **Data fetching** | TanStack Query + Server Components | Deduped client cache, SSR prefetch |
+| **Security** | Rate limits, CSP, HSTS, CORS, Zod | Production secret enforcement |
 | **Billing** | Stripe (checkout, webhooks, portal) | Subscription management, paywalling |
 | **Email** | Resend | Password resets, analysis notifications |
 | **Documents** | pdf-parse v1, mammoth | PDF and DOCX text extraction |

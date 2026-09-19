@@ -16,56 +16,78 @@ Complete API reference for the DocuIntel Legal AI Assistant.
 
 ## Authentication
 
-DocuIntel uses JWT (JSON Web Tokens) for API authentication.
+DocuIntel uses **HTTP-only cookie authentication** (`docuintel-token`) for browser sessions. Protected API routes receive trusted identity headers (`X-User-Id`, `X-User-Email`, `X-User-Name`) set by middleware after JWT verification.
 
-### Get Demo Token
-
-For development and testing, obtain a demo token:
+### Sign In (email/password)
 
 ```http
-GET /api/auth/demo-token
-```
-
-**Response:**
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJ1c2VySWQiOiJkZW1vLXVzZXItMDAxIi...",
-  "expiresIn": 86400000,
-  "user": {
-    "userId": "demo-user-001",
-    "email": "demo@docuintel.ai",
-    "role": "user"
-  }
-}
-```
-
-### Using Authentication
-
-Include the access token in the `Authorization` header:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-### Token Refresh
-
-```http
-POST /api/auth/refresh
+POST /api/auth/login
 Content-Type: application/json
 
 {
-  "refreshToken": "eyJ1c2VySWQiOiJkZW1vLXVzZXItMDAxIi..."
+  "email": "you@example.com",
+  "password": "your-password"
 }
 ```
 
-**Response:**
-```json
+Sets the `docuintel-token` cookie on success.
+
+### Register
+
+```http
+POST /api/auth/register
+Content-Type: application/json
+
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "expiresIn": 86400000
+  "name": "Your Name",
+  "email": "you@example.com",
+  "password": "your-password"
 }
 ```
+
+Password policy: minimum 8 characters, at least one letter and one number.
+
+### Social Sign-In (Google / Apple)
+
+Use Auth.js via the login UI (`signIn('google')` / `signIn('apple')`), which redirects through `/api/auth/callback/*` and then `/api/auth/bridge` to issue the same `docuintel-token` cookie.
+
+Configure separately from Google Drive integration:
+- **Login:** `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
+- **Drive:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+
+### Current User
+
+```http
+GET /api/auth/me
+Cookie: docuintel-token=<jwt>
+```
+
+### Logout
+
+```http
+POST /api/auth/logout
+```
+
+### Demo Login (development)
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{ "demo": true }
+```
+
+Disabled in production unless `ALLOW_DEMO_LOGIN=true`.
+
+### Using Authentication in API Calls
+
+From the browser, send requests with credentials so the cookie is included:
+
+```javascript
+fetch('/api/cases', { credentials: 'include' })
+```
+
+Server-side route handlers read `X-User-Id` from middleware — do not trust client-supplied identity headers.
 
 ---
 
