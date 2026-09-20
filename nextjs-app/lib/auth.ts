@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 const DEV_SECRET = 'docuintel-dev-secret-change-in-prod';
 
@@ -48,15 +49,29 @@ export async function validateToken(token: string): Promise<{ success: boolean; 
     }
 }
 
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+};
+
+/**
+ * Set auth cookie directly on a NextResponse.
+ * USE THIS in all Route Handlers — cookies().set() is a no-op in Next.js 14 Route Handlers.
+ */
+export function setAuthCookieOnResponse(response: NextResponse, token: string) {
+    response.cookies.set(COOKIE_NAME, token, COOKIE_OPTIONS);
+}
+
+/**
+ * Set auth cookie via next/headers.
+ * Only use in Server Actions or Server Components, NOT in Route Handlers.
+ */
 export function setAuthCookie(token: string) {
     const cookieStore = cookies();
-    cookieStore.set(COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    cookieStore.set(COOKIE_NAME, token, COOKIE_OPTIONS);
 }
 
 export function getAuthCookie(): string | undefined {

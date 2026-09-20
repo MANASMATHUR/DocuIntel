@@ -55,8 +55,9 @@ export async function GET() {
     }
     checks.python_backend = pythonBackend;
 
-    const allCriticalOk = checks.mongodb.ok && checks.auth_secret.ok;
-    const status = allCriticalOk ? 'healthy' : checks.mongodb.ok ? 'degraded' : 'unhealthy';
+    // Only auth_secret is truly critical — MongoDB has an in-memory fallback
+    const authOk = checks.auth_secret.ok;
+    const status = checks.mongodb.ok ? 'healthy' : authOk ? 'degraded' : 'unhealthy';
 
     return NextResponse.json(
         {
@@ -67,6 +68,6 @@ export async function GET() {
             checks,
             timestamp: new Date().toISOString(),
         },
-        { status: allCriticalOk ? 200 : 503 }
+        { status: authOk ? 200 : 503 }
     );
 }

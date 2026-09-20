@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
-import { createToken, setAuthCookie } from '@/lib/auth';
+import { createToken, setAuthCookieOnResponse } from '@/lib/auth';
 import { registerSchema } from '@/lib/validators/auth';
 
 export async function POST(request: NextRequest) {
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
                 email: email.toLowerCase(),
                 password: hashedPassword,
                 name: name.trim(),
+                role: 'user',
             });
         }
 
@@ -64,19 +65,20 @@ export async function POST(request: NextRequest) {
             userId: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: user.role || 'user',
         });
 
-        setAuthCookie(token);
-
-        return NextResponse.json({
+        const response = NextResponse.json({
             user: {
                 id: user._id.toString(),
                 email: user.email,
                 name: user.name,
-                role: user.role,
+                role: user.role || 'user',
             },
         });
+        setAuthCookieOnResponse(response, token);
+        return response;
+
     } catch (error: unknown) {
         console.error('Registration error:', error);
         return NextResponse.json(

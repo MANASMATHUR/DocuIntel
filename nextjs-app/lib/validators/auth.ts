@@ -1,10 +1,19 @@
 import { z } from 'zod';
 
-export const loginSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(1, 'Password is required'),
-    demo: z.boolean().optional(),
-});
+export const loginSchema = z.union([
+    // Demo login: only demo:true required
+    z.object({
+        demo: z.literal(true),
+        email: z.string().optional(),
+        password: z.string().optional(),
+    }),
+    // Normal login: email + password required
+    z.object({
+        demo: z.boolean().optional(),
+        email: z.string().email('Invalid email address'),
+        password: z.string().min(1, 'Password is required'),
+    }),
+]);
 
 export const registerSchema = z.object({
     name: z.string().min(1, 'Name is required').max(100),

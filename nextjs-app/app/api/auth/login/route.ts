@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import dbConnect from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
-import { createToken, setAuthCookie } from '@/lib/auth';
+import { createToken, setAuthCookieOnResponse } from '@/lib/auth';
 import { loginSchema } from '@/lib/validators/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
             dbAvailable = false;
         }
 
-        // Demo login: dev-only, rate-limited
+        // Demo login: rate-limited, allowed when ALLOW_DEMO_LOGIN=true
         if (demo) {
             if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_LOGIN !== 'true') {
                 return NextResponse.json({ error: 'Demo login is disabled in production' }, { status: 403 });
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
                     email: guestEmail,
                     password: hashedPassword,
                     name: 'Demo visitor',
+                    role: 'user',
                     isGuest: true,
                     guestExpiresAt,
                 });
@@ -68,35 +69,35 @@ export async function POST(request: NextRequest) {
                 userId: user._id.toString(),
                 email: user.email,
                 name: user.name,
-                role: user.role,
+                role: user.role || 'user',
             });
 
-            setAuthCookie(token);
-
-            return NextResponse.json({
+            const response = NextResponse.json({
                 user: {
                     id: user._id.toString(),
                     email: user.email,
                     name: user.name,
-                    role: user.role,
+                    role: user.role || 'user',
                     isGuest: true,
                 },
             });
+            setAuthCookieOnResponse(response, token);
+            return response;
         }
 
         let user;
         if (dbAvailable) {
-            user = await User.findOne({ email: email.toLowerCase() });
+            user = await User.findOne({ email: email!.toLowerCase() });
         } else {
             const { getFallbackUserByEmail } = await import('@/lib/db/memory-fallback');
-            user = getFallbackUserByEmail(email.toLowerCase());
+            user = getFallbackUserByEmail(email!.toLowerCase());
         }
 
         if (!user?.password) {
             return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
         }
 
-        const passwordMatch = await bcrypt.compare(password, user.password);
+        const passwordMatch = await bcrypt.compare(password!, user.password);
         if (!passwordMatch) {
             return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
         }
@@ -105,19 +106,20 @@ export async function POST(request: NextRequest) {
             userId: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: user.role || 'user',
         });
 
-        setAuthCookie(token);
-
-        return NextResponse.json({
+        const response = NextResponse.json({
             user: {
                 id: user._id.toString(),
                 email: user.email,
                 name: user.name,
-                role: user.role,
+                role: user.role || 'user',
             },
         });
+        setAuthCookieOnResponse(response, token);
+        return response;
+
     } catch (error: unknown) {
         console.error('Login error:', error);
         return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 500 });
